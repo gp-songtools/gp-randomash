@@ -5,9 +5,16 @@
 
   // ---- config: the one place to change model, endpoint and pricing ----
   const LYRIA = {
-    MODEL: 'lyria-3-clip-preview',          // 30-second clips. Other IDs seen in the docs: lyria-3-pro-preview, lyria-3.5
+    /* Length options. `ids` are tried in order: the next one is used only if Google answers
+       404 (model not found), so a renamed or retired preview model doesn't break the app.
+       Prices are per generated output (not per second), from ai.google.dev/gemini-api/docs/pricing. */
+    LENGTHS: {
+      clip: { label: 'Clip', detail: '30 seconds', ids: ['lyria-3-clip-preview'], costUsd: 0.04, promptLength: '30 seconds' },
+      full: { label: 'Full song', detail: 'about 2–3 minutes', ids: ['lyria-3.5', 'lyria-3-pro-preview'], costUsd: 0.08,
+              promptLength: 'full-length song with a clear intro and ending' }
+    },
+    DEFAULT_LENGTH: 'clip',
     API: 'https://generativelanguage.googleapis.com/v1beta/',
-    COST_PER_CLIP_USD: 0.04,                // estimate for lyria-3-clip-preview; check ai.google.dev/pricing
     MAX_RETRIES: 3,                         // retries after the first try, for transient errors only
     BACKOFF_MS: 1500,                       // 1.5 s, 3 s, 6 s (+ jitter)
     TIMEOUT_MS: 180000,
@@ -69,12 +76,18 @@
     return (e && e.message) ? e.message : 'HTTP ' + status;
   }
 
+  const lengthOf = k => LYRIA.LENGTHS[k] || LYRIA.LENGTHS[LYRIA.DEFAULT_LENGTH];
+  // Model IDs that answered 404 this session, so later calls skip straight to the fallback.
+  const missing = new Set();
+  const modelFor = k => lengthOf(k).ids.find(id => !missing.has(id)) || lengthOf(k).ids[0];
+
   /* Generate one clip. Retries transient errors with exponential backoff.
-     opts: { key, prompt, seed, signal, onStatus(text) }
-     Returns { bytes: Uint8Array, mime, text, seedSent, attempts }. */
+     opts: { key, prompt, seed, length: 'clip' | 'full', signal, onStatus(text) }
+     Returns { bytes: Uint8Array, mime, text, seedSent, attempts, model }. */
   async function generate(opts) {
     if (!opts.key) throw new LyriaError('Add your Gemini API key first.');
-    let withSeed = LYRIA.SEND_SEED, attempt = 0;
+    const L = lengthOf(opts.length);
+    let withSeed = LYRIA.SEND_SEED, attempt = 0, model = modelFor(opts.length);
     const say = opts.onStatus || (() => {});
     for (;;) {
       attempt++;
@@ -82,7 +95,7 @@
       if (opts.signal) opts.signal.addEventListener('abort', () => ac.abort(opts.signal.reason), { once: true });
       let res, data, netErr = null;
       try {
-        res = await fetch(LYRIA.API + 'models/' + encodeURIComponent(LYRIA.MODEL) + ':generateContent', {
+        res = await fetch(LYRIA.API + 'models/' + encodeURIComponent(model) + ':generateContent', {
           method: 'POST', signal: ac.signal,
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': opts.key },
           body: JSON.stringify(requestBody(opts.prompt, opts.seed, withSeed))
@@ -95,7 +108,14 @@
 
       if (!netErr && res.ok) {
         const out = parseResponse(data);            // throws LyriaError({refused}) on a block
-        return { bytes: b64ToBytes(out.audio.b64), mime: out.audio.mime, text: out.text, seedSent: withSeed, attempts: attempt };
+        return { bytes: b64ToBytes(out.audio.b64), mime: out.audio.mime, text: out.text, seedSent: withSeed, attempts: attempt, model };
+      }
+
+      // Model not found: try the next ID for this length, once each.
+      if (!netErr && res.status === 404) {
+        missing.add(model);
+        const next = L.ids.find(id => !missing.has(id));
+        if (next) { say(model + ' was not found; trying ' + next + '…'); model = next; attempt--; continue; }
       }
 
       // The seed field is not supported by every model: drop it once and retry immediately.
@@ -113,7 +133,7 @@
       if (!transient || attempt > LYRIA.MAX_RETRIES) {
         if (netErr) throw new LyriaError('Network error: ' + (netErr.message || netErr) + '. If this keeps happening, check your connection or an ad blocker.');
         if (res.status === 401 || res.status === 403) throw new LyriaError('The API key was not accepted (' + res.status + '): ' + apiMessage(res.status, data));
-        if (res.status === 404) throw new LyriaError('Model ' + LYRIA.MODEL + ' was not found (404). The model ID may have changed; update LYRIA.MODEL in lyria.js. ' + apiMessage(404, data));
+        if (res.status === 404) throw new LyriaError('Model ' + L.ids.join(' / ') + ' was not found (404). The model ID may have changed; update LYRIA.LENGTHS in lyria.js. ' + apiMessage(404, data));
         throw new LyriaError(apiMessage(res.status, data) + (attempt > 1 ? ' (after ' + attempt + ' tries)' : ''), { status: res.status });
       }
       const ra = res && +res.headers.get('retry-after');
@@ -131,7 +151,7 @@
 
   const extFor = mime => /wav/i.test(mime) ? 'wav' : /ogg|opus/i.test(mime) ? 'ogg' : /flac/i.test(mime) ? 'flac' : /aac|mp4|m4a/i.test(mime) ? 'm4a' : 'mp3';
 
-  const api = { LYRIA, LyriaError, generate, requestBody, parseResponse, extFor };
+  const api = { LYRIA, LyriaError, generate, requestBody, parseResponse, extFor, lengthOf, modelFor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lyria = api;
 })(typeof self !== 'undefined' ? self : this);

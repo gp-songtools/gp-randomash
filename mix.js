@@ -135,7 +135,8 @@
 
   /* The prompt template:
      "{mood} {primary} track blended with {secondary} elements, {tempo} BPM, {energy} energy,
-      {key feel}, featuring {instruments}, {arrangement}, instrumental, 30 seconds, clean stereo mix."
+      {key feel}, featuring {instruments}, {arrangement}, instrumental, {length}, clean stereo mix."
+     {length} is s.lengthText ("30 seconds" for clips, a full-song phrase for songs).
      Empty parts are dropped. `role` (a STEM_ROLES entry) swaps the instrument clause. */
   function composePrompt(idx, s, role) {
     const gs = (s.genres || []).map(id => idx.byId[id]).filter(Boolean);
@@ -148,7 +149,7 @@
       KEY_FEELS[s.key] || KEY_FEELS.minor,
       role ? role.text : 'featuring ' + joinList(instrumentsFor(gs)),
       ARRANGEMENTS[s.arrangement] || '',
-      'instrumental', '30 seconds', 'clean stereo mix'];
+      'instrumental', s.lengthText || '30 seconds', 'clean stereo mix'];
     return parts.filter(Boolean).join(', ') + '.';
   }
 

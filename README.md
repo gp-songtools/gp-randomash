@@ -1,6 +1,6 @@
 # Randomash
 
-A genre blender for Google's **Lyria 3** music model. Pick genres from a large list, shape them with a few controls, watch the Lyria prompt update live, and generate 30-second instrumental clips. Stems are optional. The app runs entirely in the browser, with no server and no build step, so it can be hosted on GitHub Pages.
+A genre blender for Google's **Lyria 3** music model. Pick genres from a large list, shape them with a few controls, watch the Lyria prompt update live, and generate instrumental 30-second clips or full songs. Stems are optional, and results can be trimmed into loops. The app runs entirely in the browser, with no server and no build step, so it can be hosted on GitHub Pages.
 
 ## Setup
 
@@ -53,21 +53,30 @@ node tools/dry-run.js 5
 - **Mood** has 16 options.
 - **Key feel** is major, minor, modal or ambiguous.
 - **Arrangement** is none, build-up, drop, stripped-down or loop-friendly.
-- **Seed** is a number with a 🎲 button. Tick **New random seed for each generation** to roll a fresh seed every time. Untick it, or type a seed, to lock it and regenerate the same recipe.
+- **Seed** is a number with a 🎲 button. The seed sets the model's dice roll, not the style; the style comes from the prompt. Tick **New random seed for each generation** for a different track each time from the same recipe. Untick it, or type a seed, to lock it: the same prompt and seed should give the same track again, so you can change one setting and hear just that change. How exactly Lyria honors a seed isn't documented.
 
 **Lyria prompt.** This is the composed prompt, built from:
 
-> {Mood} {primary} track blended with {secondaries} elements, {tempo} BPM, {energy} energy, {key feel}, featuring {instruments}, {arrangement}, instrumental, 30 seconds, clean stereo mix.
+> {Mood} {primary} track blended with {secondaries} elements, {tempo} BPM, {energy} energy, {key feel}, featuring {instruments}, {arrangement}, instrumental, {length}, clean stereo mix.
+
+{length} is "30 seconds" for a clip, or "full-length song with a clear intro and ending" for a full song.
 
 The text is editable. Once you edit it, a badge changes from *live* to *edited* and live updates pause until you click **Reset to composed prompt**. Prompts are US English and never name artists.
 
 **Generate.**
+- **Length**: **Clip** (30 seconds, about $0.04) or **Full song** (about 2–3 minutes, about $0.08). You pay per generation, not per second. Full songs have no exact-length setting.
 - **Stems** switches to four separate generations: drums only, bass only, chords and pads only, and melody only. They share tempo, key feel and seed. Being separate generations, they may not line up perfectly.
 - **Use the gp-master stem splitter instead** (shown under Stems) generates one mix and then splits it in your browser into drums, bass and *other* (chords and melody). The split is done by [gp-master](https://github.com/gp-songtools/gp-master)'s own splitter, which downloads about 60 MB of models the first time.
 - The estimated cost is shown next to the button before every call.
 - While a run is in progress, a spinner and status line show which clip is being generated and any retries. **Generate** is disabled and **Cancel** appears.
 
 **Result.** Each clip gets a player: play/pause, a waveform that fills in as it plays (click to seek), elapsed and total time, and a download link. If the model returns text with the audio, it is shown as a *Model note*.
+
+**Trim.** Drag across any waveform, or click **✂ Trim**, to pick a region.
+- Start and end snap to bars or beats at the run's tempo. Snapping assumes the track starts on a downbeat, so check by ear. You can also turn snapping off and type exact times.
+- **Loop region** plays the selection seamlessly on repeat.
+- **Save trimmed WAV** adds the cut to the same run, in history and in the output folder. It uses 3 ms fades at the edges to avoid clicks.
+- Trimming happens in the browser and costs nothing, but the full clip was still billed.
 
 **Refusals.** If the safety filter blocks a prompt, the refusal message appears in a red box under the Generate button and the page stays usable. In stems mode, the remaining parts still run.
 
@@ -97,8 +106,9 @@ Everything about the API lives at the top of `lyria.js` in `LYRIA`:
 
 | Setting | Default | Notes |
 | --- | --- | --- |
-| `MODEL` | `lyria-3-clip-preview` | 30-second clips. Doc pages also list `lyria-3-pro-preview` and `lyria-3.5` (full-length songs). |
-| `COST_PER_CLIP_USD` | `0.04` | Estimate for the clip model; confirm on Google's pricing page. |
+| `LENGTHS.clip` | `lyria-3-clip-preview`, $0.04 | 30-second clips. |
+| `LENGTHS.full` | `lyria-3.5`, then `lyria-3-pro-preview`, $0.08 | Full songs. If Google answers "model not found" (404), the next ID is tried and remembered for the session. |
+| `DEFAULT_LENGTH` | `clip` | Length chosen on first visit. |
 | `MAX_RETRIES` | `3` | For 408/429/5xx and network errors, with exponential backoff (1.5 s, 3 s, 6 s, or the server's `Retry-After`). |
 | `SEND_SEED` | `true` | Sends `generationConfig.seed`. If the API rejects the field, the request is retried without it and the run is marked `seedSent: false`. |
 

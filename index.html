@@ -46,7 +46,7 @@
         <button class="ghost" id="folderForget" type="button" hidden>Stop using folder</button>
       </div>
       <p class="hint" id="folderNote">With a folder chosen (Chrome or Edge), each run is written to <code>output/&lt;timestamp&gt;_&lt;slug&gt;/</code> and <code>history.json</code> is kept up to date there.</p>
-      <p class="hint">Model: <code id="modelId"></code> · about <span id="unitCost"></span> per clip (estimate).</p>
+      <p class="hint" id="modelInfo"></p>
     </div>
   </div>
 </section>
@@ -103,7 +103,7 @@
         <input type="number" id="seed" min="0" max="2147483647" step="1">
         <button class="ghost" id="seedRoll" type="button" title="New seed now">🎲</button>
       </div>
-      <label class="chk"><input type="checkbox" id="seedRandom"><span>New random seed for each generation</span></label>
+      <label class="chk"><input type="checkbox" id="seedRandom"><span>New random seed for each generation<small>On: a different track every time from the same recipe. Off (locked): the same prompt and seed should give the same track again, so you can change one setting and hear only that change.</small></span></label>
     </div>
   </section>
 
@@ -118,8 +118,11 @@
     <p class="hint">US English only. Describe styles and instruments; don’t name real artists or ask to imitate a voice. Editing the text stops live updates until you reset.</p>
 
     <div class="genrow">
+      <span class="lbl" style="margin-top:6px">Length</span>
+      <div class="seg" id="lengthSeg" role="radiogroup" aria-label="Length"></div>
+      <p class="hint" id="lengthNote"></p>
       <label class="chk"><input type="checkbox" id="stems"><span>Stems<small>Four separate generations with role prompts (drums, bass, chords and pads, melody) sharing tempo, key feel and seed. They are separate clips, so they may not line up perfectly.</small></span></label>
-      <label class="chk sub" id="splitRow"><input type="checkbox" id="split" disabled><span>Use the gp-master stem splitter instead<small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time.</small></span></label>
+      <label class="chk sub" id="splitRow"><input type="checkbox" id="split" disabled><span>Use the gp-master stem splitter instead<small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time; a full song takes several minutes to split.</small></span></label>
     </div>
     <div class="go">
       <button id="gen" class="btn-go" type="button">Generate</button>

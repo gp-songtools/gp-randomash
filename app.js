@@ -12,17 +12,21 @@
   let IDX = null;
   const S = {
     genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', arrangement: 'none',
-    seed: randSeed(), seedRandom: true, stems: false, split: false, dry: true,
+    seed: randSeed(), seedRandom: true, stems: false, split: false, dry: true, length: Lyria.LYRIA.DEFAULT_LENGTH,
     promptEdited: false, prompt: ''
   };
   let tempoTouched = false, busy = false, abortCtl = null, currentRunId = null, apiKey = '';
 
   function randSeed() { return Math.floor(Math.random() * 2147483647); }
+  const LEN = () => Lyria.lengthOf(S.length);
+  const unitCost = () => LEN().costUsd;
+  // State as the prompt template sees it: adds the length wording for the chosen option.
+  const ps = () => Object.assign({}, S, { lengthText: LEN().promptLength });
 
   // ---------- boot ----------
   async function boot() {
-    $('modelId').textContent = Lyria.LYRIA.MODEL;
-    $('unitCost').textContent = '$' + Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2);
+    $('modelInfo').innerHTML = Object.values(Lyria.LYRIA.LENGTHS).map(L =>
+      `${esc(L.label)}: <code>${esc(L.ids[0])}</code>${L.ids.length > 1 ? ` (falls back to <code>${esc(L.ids.slice(1).join(', '))}</code>)` : ''}, about $${L.costUsd.toFixed(2)} each`).join('<br>');
     let cat;
     try { cat = await (await fetch('genres.json', { cache: 'no-cache' })).json(); }
     catch (e) { setStatus('Could not load genres.json. Serve this folder over http(s); opening the file directly does not work.', 'err'); return; }
@@ -43,6 +47,7 @@
       if (Mix.MOODS.includes(u.mood)) S.mood = u.mood;
       if (Mix.KEY_FEELS[u.key]) S.key = u.key;
       if (u.arrangement in Mix.ARRANGEMENTS) S.arrangement = u.arrangement;
+      if (Lyria.LYRIA.LENGTHS[u.length]) S.length = u.length;
       for (const k of ['seedRandom', 'stems', 'split', 'dry', 'promptEdited']) if (typeof u[k] === 'boolean') S[k] = u[k];
       if (typeof u.prompt === 'string') S.prompt = u.prompt;
       tempoTouched = !!u.tempoTouched;
@@ -69,7 +74,7 @@
   const money = v => (v < 0 ? '−$' : '$') + Math.abs(v).toFixed(2);
 
   function renderBalance() {
-    const b = balGet(), left = balLeft(), badge = $('balBadge'), unit = Lyria.LYRIA.COST_PER_CLIP_USD;
+    const b = balGet(), left = balLeft(), badge = $('balBadge'), unit = unitCost();
     $('balClear').hidden = !b;
     if (!b) {
       badge.hidden = true;
@@ -80,10 +85,11 @@
     badge.hidden = false;
     badge.textContent = left > 0 ? `≈ ${money(left)} left` : `≈ ${money(left)} · top up`;
     badge.className = 'bal' + (left <= 0 ? ' out' : left < unit * 10 ? ' low' : '');
-    badge.setAttribute('aria-label', `Estimated prepay balance ${money(left)}, about ${clips} clips. Click to update.`);
+    const what = S.length === 'full' ? 'song' : 'clip';
+    badge.setAttribute('aria-label', `Estimated prepay balance ${money(left)}, about ${clips} ${what}s. Click to update.`);
     const when = new Date(b.setAt);
     $('balState').textContent = `Set to ${money(b.amount)} on ${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. `
-      + `Since then about ${money(b.spent)} spent, so roughly ${money(left)} (${clips} clip${clips === 1 ? '' : 's'}) left. `
+      + `Since then about ${money(b.spent)} spent, so roughly ${money(left)} (${clips} ${what}${clips === 1 ? '' : 's'} at the current length) left. `
       + 'This is an estimate: re-enter the figure from AI Studio now and then.';
     renderCost();
   }
@@ -93,6 +99,8 @@
     $('mood').innerHTML = Mix.MOODS.map(m => `<option value="${m}">${m[0].toUpperCase() + m.slice(1)}</option>`).join('');
     const kf = { major: 'Major', minor: 'Minor', modal: 'Modal', ambiguous: 'Ambiguous' };
     $('keyFeel').innerHTML = Object.keys(kf).map(k => `<label><input type="radio" name="keyFeel" value="${k}"><span>${kf[k]}</span></label>`).join('');
+    $('lengthSeg').innerHTML = Object.entries(Lyria.LYRIA.LENGTHS).map(([k, L]) =>
+      `<label><input type="radio" name="length" value="${k}"><span>${esc(L.label)} · ${esc(L.detail)} · $${L.costUsd.toFixed(2)}</span></label>`).join('');
     const ar = { none: 'None', buildup: 'Build-up', drop: 'Drop', stripped: 'Stripped-down', loop: 'Loop-friendly' };
     $('arr').innerHTML = Object.keys(ar).map(k => `<option value="${k}">${ar[k]}</option>`).join('');
   }
@@ -108,6 +116,7 @@
   function applyStateToControls() {
     $('tempo').value = S.tempo; $('energy').value = S.energy; $('mood').value = S.mood; $('arr').value = S.arrangement;
     const r = document.querySelector(`#keyFeel input[value="${S.key}"]`); if (r) r.checked = true;
+    const l = document.querySelector(`#lengthSeg input[value="${S.length}"]`); if (l) l.checked = true;
     $('seed').value = S.seed; $('seedRandom').checked = S.seedRandom;
     $('stems').checked = S.stems; $('split').checked = S.split; $('dry').checked = S.dry;
     if (S.promptEdited) $('prompt').value = S.prompt;
@@ -176,9 +185,12 @@
     $('split').disabled = !S.stems;
     $('splitRow').style.opacity = S.stems ? 1 : .55;
     document.body.classList.toggle('dry', S.dry);
+    $('lengthNote').textContent = S.length === 'full'
+      ? 'Full songs cost twice as much and take longer to generate. There is no exact-length setting; the model decides, typically 2–3 minutes.'
+      : 'Clips are always 30 seconds. Use Trim on a result to cut a shorter loop (the full clip is still billed).';
   }
 
-  function composed() { return Mix.composePrompt(IDX, S); }
+  function composed() { return Mix.composePrompt(IDX, ps()); }
 
   function renderPrompt() {
     if (!S.promptEdited) { S.prompt = composed(); $('prompt').value = S.prompt; }
@@ -193,10 +205,10 @@
     return Mix.STEM_ROLES.length;
   }
   function renderCost() {
-    const n = plannedCalls(), usd = n * Lyria.LYRIA.COST_PER_CLIP_USD;
+    const n = plannedCalls(), usd = n * unitCost(), what = S.length === 'full' ? 'song' : 'clip';
     $('cost').textContent = S.dry
-      ? `Dry run: no API call. A live run would be ${n} clip${n > 1 ? 's' : ''}, about $${usd.toFixed(2)}.`
-      : `Estimated cost: about $${usd.toFixed(2)} (${n} clip${n > 1 ? 's' : ''} × $${Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2)})`
+      ? `Dry run: no API call. A live run would be ${n} ${what}${n > 1 ? 's' : ''}, about $${usd.toFixed(2)}.`
+      : `Estimated cost: about $${usd.toFixed(2)} (${n} ${what}${n > 1 ? 's' : ''} × $${unitCost().toFixed(2)})`
         + (balLeft() != null ? ` · leaves about ${money(balLeft() - usd)}` : '');
     $('gen').disabled = busy || !$('prompt').value.trim();
   }
@@ -259,6 +271,13 @@
     $('mood').onchange = e => { S.mood = e.target.value; renderAll(); };
     $('keyFeel').onchange = e => { S.key = e.target.value; renderAll(); };
     $('arr').onchange = e => { S.arrangement = e.target.value; renderAll(); };
+    $('lengthSeg').onchange = e => {
+      const from = LEN().promptLength;
+      S.length = e.target.value;
+      // Keep an edited prompt's length wording in step with the choice.
+      if (S.promptEdited && S.prompt.includes(from)) { S.prompt = S.prompt.replace(from, LEN().promptLength); $('prompt').value = S.prompt; }
+      renderAll(); renderBalance();
+    };
     $('seed').onchange = e => { const v = Math.max(0, Math.min(2147483647, Math.floor(+e.target.value || 0))); S.seed = v; e.target.value = v; S.seedRandom = false; $('seedRandom').checked = false; saveUI(); };
     $('seedRoll').onclick = () => { S.seed = randSeed(); $('seed').value = S.seed; saveUI(); };
     $('seedRandom').onchange = e => { S.seedRandom = e.target.checked; saveUI(); };
@@ -337,7 +356,7 @@
     if (!S.stems || S.split) return [{ role: 'mix', label: 'Full mix', prompt }];
     return Mix.STEM_ROLES.map(r => ({
       role: r.id, label: r.label,
-      prompt: S.promptEdited ? Mix.rolePromptFrom(prompt, r) : Mix.composePrompt(IDX, S, r)
+      prompt: S.promptEdited ? Mix.rolePromptFrom(prompt, r) : Mix.composePrompt(IDX, ps(), r)
     }));
   }
 
@@ -356,7 +375,7 @@
     if (S.seedRandom) { S.seed = randSeed(); $('seed').value = S.seed; }
     const calls = buildCalls(prompt);
     const mode = !S.stems ? 'mix' : S.split ? 'mix+split' : 'stems';
-    const cost = calls.length * Lyria.LYRIA.COST_PER_CLIP_USD;
+    const unit = unitCost(), cost = calls.length * unit, length = S.length;
 
     if (S.dry) return dryRun(calls, mode, cost);
     if (!apiKey) { setStatus('Add your Gemini API key under “API key & output” first. Or turn on Dry run to preview requests.', 'err'); $('setPanel').hidden = false; $('key').focus(); return; }
@@ -372,7 +391,7 @@
       id, timestamp: now.toISOString(),
       genres: S.genres.slice(), genreNames: S.genres.map(g => IDX.byId[g].name),
       sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, arrangement: S.arrangement },
-      prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.LYRIA.MODEL, mode,
+      prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.modelFor(length), length, mode,
       files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), spentUsd: 0, rating: 0, starred: false, notes: ''
     };
     currentRunId = id;
@@ -381,12 +400,13 @@
     try {
       for (let i = 0; i < calls.length; i++) {
         const c = calls[i];
-        setStatus(`Generating ${c.label.toLowerCase()} (${i + 1} of ${calls.length}) · est. $${Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2)} for this clip…`, 'busy');
+        setStatus(`Generating ${c.label.toLowerCase()} (${i + 1} of ${calls.length}) · est. $${unit.toFixed(2)} for this ${length === 'full' ? 'song' : 'clip'}${length === 'full' ? ' (full songs can take a minute or more)' : ''}…`, 'busy');
         try {
-          const r = await Lyria.generate({ key: apiKey, prompt: c.prompt, seed: S.seed, signal: abortCtl.signal, onStatus: t => setStatus(t, 'busy') });
+          const r = await Lyria.generate({ key: apiKey, prompt: c.prompt, seed: S.seed, length, signal: abortCtl.signal, onStatus: t => setStatus(t, 'busy') });
           // A returned clip is billed; refusals and errors are assumed not to be.
-          run.spentUsd = Math.round((run.spentUsd + Lyria.LYRIA.COST_PER_CLIP_USD) * 10000) / 10000;
-          balSpend(Lyria.LYRIA.COST_PER_CLIP_USD);
+          run.spentUsd = Math.round((run.spentUsd + unit) * 10000) / 10000;
+          run.model = r.model;
+          balSpend(unit);
           if (!r.seedSent) run.seedSent = false;
           if (r.text && !run.modelText.split('\n').includes(r.text)) run.modelText = (run.modelText ? run.modelText + '\n' : '') + r.text;
           await addFile(run, c, new Blob([r.bytes], { type: r.mime }), r.mime, out);
@@ -424,7 +444,8 @@
     try { saved = await Store.writeRunFile(path, blob); } catch (e) { console.warn(e); }
     const f = { role: call.role, label: call.label, path, file: run.id + '_' + name, mime, bytes: blob.size, savedToFolder: saved, prompt: call.prompt };
     run.files.push(f);
-    out.clips.appendChild(player(blob, f));
+    const p = player(blob, f, run);
+    if (out.after) out.after.after(p); else out.clips.appendChild(p);
   }
 
   function dryRun(calls, mode, cost) {
@@ -432,7 +453,7 @@
     card.hidden = false;
     $('resultTitle').textContent = 'Dry run: nothing was sent';
     $('resultMeta').textContent = `${calls.length} request${calls.length > 1 ? 's' : ''} · about $${cost.toFixed(2)} if live`;
-    const url = Lyria.LYRIA.API + 'models/' + Lyria.LYRIA.MODEL + ':generateContent';
+    const url = Lyria.LYRIA.API + 'models/' + Lyria.modelFor(S.length) + ':generateContent';
     $('result').innerHTML = calls.map(c => `
       <div><b>${esc(c.label)}</b>
       <pre class="reqbox">POST ${esc(url)}\nx-goog-api-key: ••••\n\n${esc(JSON.stringify(Lyria.requestBody(c.prompt, S.seed, Lyria.LYRIA.SEND_SEED), null, 2))}</pre></div>`).join('')
@@ -519,28 +540,82 @@
     return new Blob([buf], { type: 'audio/wav' });
   }
 
-  // ---------- player with waveform ----------
-  let actx = null, playing = null;
-  function player(blob, f) {
+  // ---------- player with waveform and trim ----------
+  /* Click the waveform to seek; drag across it to select a region. The Trim panel snaps the region
+     to beats or bars at the run's tempo (assuming the track starts on a downbeat), loops it
+     seamlessly through Web Audio, and saves it as a WAV added to the run. */
+  let actx = null, playing = null, looping = null;
+  const ac = () => (actx = actx || new (window.AudioContext || window.webkitAudioContext)());
+  function stopLoop() { if (looping) { try { looping.src.stop(); } catch (_) {} looping.done(); looping = null; } }
+
+  function player(blob, f, run) {
     const url = URL.createObjectURL(blob);
+    const bpm = run && run.sliders && run.sliders.tempo;
     const el = document.createElement('div');
     el.className = 'player';
     el.innerHTML = `
       <div class="ttl">${esc(f.label)} <small>${esc(f.role)} · ${(f.bytes / 1024 / 1024).toFixed(2)} MB${f.savedToFolder ? ' · saved to folder' : ''}</small></div>
       <button type="button" class="pp" aria-label="Play ${esc(f.label)}">▶</button>
-      <canvas aria-label="Waveform; click to seek"></canvas>
+      <canvas aria-label="Waveform. Click to seek, drag to select a region to trim."></canvas>
       <span class="tm">0:00 / –:––</span>
-      <div class="dl"><a href="${url}" download="${esc(f.file)}">Download ${esc(f.file)}</a>${f.prompt ? '<span class="hint" style="margin:0" title="' + esc(f.prompt) + '">prompt ▸ hover</span>' : ''}</div>`;
+      <div class="dl"><a href="${url}" download="${esc(f.file)}">Download ${esc(f.file)}</a>
+        <button type="button" class="link" data-trim aria-expanded="false">✂ Trim</button>
+        ${f.prompt ? '<span class="hint" style="margin:0" title="' + esc(f.prompt) + '">prompt ▸ hover</span>' : ''}</div>
+      <div class="trim" hidden>
+        <div class="row">
+          <label>Start <input type="number" data-a min="0" step="0.01"> s</label>
+          <label>End <input type="number" data-b min="0" step="0.01"> s</label>
+          <label>Snap <select data-snap>
+            <option value="bar"${bpm ? ' selected' : ''}>to bars</option><option value="beat">to beats</option><option value="off"${bpm ? '' : ' selected'}>off</option>
+          </select></label>
+        </div>
+        <div class="row">
+          <span class="len" data-len></span><span class="spacer"></span>
+          <button type="button" class="ghost small" data-loop>▶ Loop region</button>
+          <button type="button" class="small" data-save>Save trimmed WAV</button>
+        </div>
+        <p class="hint">Drag across the waveform to pick a region.${bpm ? ` Beats and bars use ${bpm} BPM and assume the track starts on a downbeat, so check by ear.` : ''} Trimming happens in your browser and costs nothing.</p>
+      </div>`;
     const audio = new Audio(url); audio.preload = 'metadata';
-    const btn = el.querySelector('.pp'), cv = el.querySelector('canvas'), tm = el.querySelector('.tm');
-    let peaks = null;
+    const q = s => el.querySelector(s);
+    const btn = q('.pp'), cv = q('canvas'), tm = q('.tm'), panel = q('.trim'), inA = q('[data-a]'), inB = q('[data-b]'), snapSel = q('[data-snap]');
+    let peaks = null, decoded = null, sel = null;
+    const dur = () => decoded ? decoded.duration : (isFinite(audio.duration) ? audio.duration : 0);
     const fmt = s => isFinite(s) ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '–:––';
-    const draw = () => {
+    const unit = () => { const m = snapSel.value; return !bpm || m === 'off' ? 0 : (60 / bpm) * (m === 'bar' ? 4 : 1); };
+    const snap = t => { const u = unit(); return u ? Math.round(t / u) * u : t; };
+    function setSel(a, b, doSnap) {
+      const D = dur(); if (!D) return;
+      if (b < a) [a, b] = [b, a];
+      if (doSnap !== false) { a = snap(a); b = snap(b); }
+      const u = unit() || 0.05;
+      a = Math.max(0, Math.min(a, D)); b = Math.max(0, Math.min(b, D));
+      if (b - a < u - 1e-6) b = Math.min(D, a + u);
+      if (b - a < 0.05) return;
+      sel = [a, b];
+      inA.value = a.toFixed(2); inB.value = b.toFixed(2);
+      const secs = b - a, u2 = bpm ? 60 / bpm : 0;
+      q('[data-len]').textContent = `${secs.toFixed(2)} s` + (u2 ? ` · ${+(secs / u2 / 4).toFixed(2)} bars (${+(secs / u2).toFixed(1)} beats)` : '');
+      if (looping && looping.owner === el) startLoop();
+      draw();
+    }
+    function openTrim(open) {
+      panel.hidden = !open; q('[data-trim]').setAttribute('aria-expanded', open);
+      if (open && !sel) { const u = unit() ? (60 / bpm) * 4 : 0; setSel(0, u ? u * 4 : Math.min(8, dur())); }
+      if (!open && looping && looping.owner === el) stopLoop();
+      draw();
+    }
+
+    function draw() {
       const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
       if (!w) return;
       if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-      const g = cv.getContext('2d'), cs = getComputedStyle(document.documentElement);
+      const g = cv.getContext('2d'), cs = getComputedStyle(document.documentElement), D = dur();
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+      if (sel && D && !panel.hidden) {
+        g.fillStyle = cs.getPropertyValue('--soft');
+        g.fillRect(sel[0] / D * w, 0, (sel[1] - sel[0]) / D * w, h);
+      }
       const prog = audio.duration ? audio.currentTime / audio.duration : 0;
       const bars = Math.max(20, Math.floor(w / 3));
       for (let i = 0; i < bars; i++) {
@@ -549,28 +624,84 @@
         g.fillStyle = (i / bars) < prog ? cs.getPropertyValue('--waveOn') : cs.getPropertyValue('--wave');
         g.fillRect(i * 3, (h - bh) / 2, 2, bh);
       }
-    };
+      if (sel && D && !panel.hidden) {
+        g.fillStyle = cs.getPropertyValue('--ac');
+        for (const t of sel) g.fillRect(Math.min(w - 2, t / D * w), 0, 2, h);
+      }
+    }
     const tick = () => { draw(); tm.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration); if (!audio.paused) requestAnimationFrame(tick); };
     audio.addEventListener('loadedmetadata', tick);
     audio.addEventListener('ended', () => { btn.textContent = '▶'; tick(); });
     audio.addEventListener('pause', () => { btn.textContent = '▶'; });
     audio.addEventListener('play', () => { btn.textContent = '❚❚'; tick(); });
     btn.onclick = () => {
-      if (audio.paused) { if (playing && playing !== audio) playing.pause(); playing = audio; audio.play(); }
+      if (audio.paused) { stopLoop(); if (playing && playing !== audio) playing.pause(); playing = audio; audio.play(); }
       else audio.pause();
     };
-    cv.onclick = e => { if (!audio.duration) return; const r = cv.getBoundingClientRect(); audio.currentTime = (e.clientX - r.left) / r.width * audio.duration; tick(); };
+
+    // click = seek, drag = select a region
+    let down = null;
+    const tAt = e => { const r = cv.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur(); };
+    cv.addEventListener('pointerdown', e => { if (!dur()) return; down = { x: e.clientX, t: tAt(e), drag: false }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', e => {
+      if (!down) return;
+      if (!down.drag && Math.abs(e.clientX - down.x) > 4) { down.drag = true; if (panel.hidden) openTrim(true); }
+      if (down.drag) setSel(down.t, tAt(e));
+    });
+    cv.addEventListener('pointerup', e => {
+      if (!down) return;
+      if (!down.drag && audio.duration) { audio.currentTime = tAt(e) / dur() * audio.duration; tick(); }
+      down = null;
+    });
+    q('[data-trim]').onclick = () => openTrim(panel.hidden);
+    inA.onchange = () => sel && setSel(+inA.value, sel[1]);
+    inB.onchange = () => sel && setSel(sel[0], +inB.value);
+    snapSel.onchange = () => sel && setSel(sel[0], sel[1]);
+
+    // seamless loop preview through Web Audio
+    const loopBtn = q('[data-loop]');
+    function startLoop() {
+      if (!decoded || !sel) return;
+      stopLoop(); if (playing) playing.pause();
+      const src = ac().createBufferSource();
+      src.buffer = decoded; src.loop = true; src.loopStart = sel[0]; src.loopEnd = sel[1];
+      src.connect(ac().destination); ac().resume(); src.start(0, sel[0]);
+      looping = { src, owner: el, done: () => { loopBtn.textContent = '▶ Loop region'; } };
+      loopBtn.textContent = '■ Stop loop';
+    }
+    loopBtn.onclick = () => (looping && looping.owner === el ? stopLoop() : startLoop());
+
+    q('[data-save]').onclick = async () => {
+      if (!decoded || !sel) return;
+      const sr = decoded.sampleRate, s0 = Math.round(sel[0] * sr), s1 = Math.round(sel[1] * sr), n = s1 - s0;
+      const fade = Math.min(Math.round(sr * 0.003), n >> 2);   // 3 ms edges avoid clicks; loops stay seamless enough
+      const ch = [];
+      for (let c = 0; c < Math.min(2, decoded.numberOfChannels); c++) {
+        const x = decoded.getChannelData(c).slice(s0, s1);
+        for (let i = 0; i < fade; i++) { const g = i / fade; x[i] *= g; x[n - 1 - i] *= g; }
+        ch.push(x);
+      }
+      const wav = encodeWav(ch, sr);
+      const tag = `${sel[0].toFixed(2)}-${sel[1].toFixed(2)}s`;
+      const tr = { role: f.role + '-trim-' + tag.replace(/\./g, '_'), label: `${f.label} · trim ${tag}${bpm && unit() ? ` (${q('[data-len]').textContent.split('·')[1].trim()})` : ''}`, prompt: '' };
+      const saved = run && await Store.getRun(run.id);
+      if (!saved) { downloadBlob(wav, (f.file || 'clip').replace(/\.\w+$/, '') + '_trim_' + tag + '.wav'); setStatus('Trim downloaded.'); return; }
+      await addFile(saved, tr, wav, 'audio/wav', { clips: el.parentNode, after: el });
+      await Store.putRun(saved);
+      if (run.files !== saved.files) run.files = saved.files;
+      setStatus(`Trimmed ${tag} saved to this run${Store.folderName() ? ' and the output folder' : ''}. Trimming is free.`);
+      renderHistory();
+    };
+
     new ResizeObserver(draw).observe(cv);
-    // decode for the waveform (failure just leaves a flat bar)
-    blob.arrayBuffer().then(ab => {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      return actx.decodeAudioData(ab);
-    }).then(b => {
+    // decode for the waveform, trimming and loop preview (failure just leaves a flat bar)
+    blob.arrayBuffer().then(ab => ac().decodeAudioData(ab)).then(b => {
+      decoded = b;
       const d = b.getChannelData(0), N = 600, step = Math.max(1, Math.floor(d.length / N)), p = new Float32Array(N);
       let mx = 0;
       for (let i = 0; i < N; i++) { let m = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 4) { const a = Math.abs(d[j]); if (a > m) m = a; } p[i] = m; if (m > mx) mx = m; }
       peaks = p.map(x => mx ? x / mx : 0); draw();
-    }).catch(() => {});
+    }).catch(() => { q('[data-trim]').hidden = true; });
     return el;
   }
 
@@ -593,7 +724,7 @@
           <button type="button" class="star${r.starred ? ' on' : ''}" data-act="star" aria-pressed="${!!r.starred}" aria-label="Star">${r.starred ? '★' : '☆'}</button>
           <button type="button" class="main" data-act="restore" title="Restore these genres and settings">
             <span class="gn">${esc((r.genreNames || r.genres || []).join(' + '))}</span>
-            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
+            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
           </button>
         </div>
         <div class="row" style="margin-top:4px">
@@ -633,7 +764,7 @@
     const run = await Store.getRun(d.closest('.hrun').dataset.id), box = d.querySelector('[data-clips]');
     for (const f of run.files || []) {
       const blob = await Store.getAudio(run.id, f.role);
-      if (blob) box.appendChild(player(blob, f));
+      if (blob) box.appendChild(player(blob, f, run));
       else box.insertAdjacentHTML('beforeend', `<p class="hint">${esc(f.label)}: audio not stored in this browser (${esc(f.path)})</p>`);
     }
     if (!(run.files || []).length) box.innerHTML = '<p class="hint">No clips.</p>';
@@ -650,7 +781,8 @@
     if (sl.arrangement in Mix.ARRANGEMENTS) S.arrangement = sl.arrangement;
     S.seed = r.seed | 0; S.seedRandom = false;
     S.stems = r.mode === 'stems' || r.mode === 'mix+split'; S.split = r.mode === 'mix+split';
-    S.promptEdited = !!r.promptEdited && r.prompt !== Mix.composePrompt(IDX, S);
+    S.length = Lyria.LYRIA.LENGTHS[r.length] ? r.length : 'clip';   // runs from before the option were clips
+    S.promptEdited = !!r.promptEdited && r.prompt !== Mix.composePrompt(IDX, ps());
     if (S.promptEdited) S.prompt = r.prompt;
     tempoTouched = true; currentRunId = r.id;
     applyStateToControls(); renderAll(); renderHistory();

@@ -4,7 +4,7 @@
 - **Directory map**
   - `index.html`, `styles.css`, `app.js`: page, styles, UI (picker, controls, prompt, generation, players, history, balance)
   - `mix.js`: genre index, pair clash, Surprise me, prompt template; UMD, also runs in Node
-  - `lyria.js`: API client; the `LYRIA` object at the top is the one place for model ID, endpoint, price, retries
+  - `lyria.js`: API client; the `LYRIA` object at the top is the one place for model IDs (`LENGTHS`: clip and full song, with 404 fallbacks), prices, endpoint and retries
   - `store.js`: IndexedDB `randomash` (stores `runs`, `audio`, `meta`), optional output folder, history.json import/export
   - `split.html`: bridge that runs gp-master's stem splitter via `<base href="../gp-master/">`
   - `genres.json`: 127 genres in 13 families (bpm, energy, acoustic, clash, instruments; families have `near`)
@@ -20,7 +20,8 @@
   - API key lives only in the browser (memory, or `randomash.key.v1` when Remember is ticked); send it only in the `x-goog-api-key` header, never in a URL, log, error text or commit
   - Prompts: US English, never name real artists or imitate voices
   - localStorage keys: `randomash.ui.v1`, `randomash.key.v1`, `randomash.balance.v1`; don't change a key's format without migrating it
-  - Balance is an estimate (amount entered minus `COST_PER_CLIP_USD` per returned clip); kept apart from history so deleting runs never refunds
+  - Balance is an estimate (amount entered minus the chosen length's `costUsd` per returned clip); kept apart from history so deleting runs never refunds
+  - Trim runs entirely in the browser (Web Audio decode, WAV export); it must never call the API
   - Requests stay sequential; retries only for transient errors, never for an empty prepay balance (402/429 "prepayment credits are depleted")
   - Match the gp-master palette and font; colors only via CSS vars on `:root` with the dark-mode overrides
   - Do not modify `gp-songtools/gp-master` without asking the owner; Randomash uses its files as published

@@ -7,7 +7,7 @@
   - `lyria.js`: API client; the `LYRIA` object at the top is the one place for model IDs (`LENGTHS`: clip and full song, with 404 fallbacks), prices, endpoint and retries
   - `store.js`: IndexedDB `randomash` (stores `runs`, `audio`, `meta`), optional output folder, history.json import/export
   - `split.html`: bridge that runs gp-master's stem splitter via `<base href="../gp-master/">`
-  - `genres.json`: 134 genres in 13 families (bpm, energy, acoustic, clash, instruments; families have `near`)
+  - `genres.json`: 135 genres in 14 families (bpm, energy, acoustic, clash, instruments; families have `near`)
   - `tools/dry-run.js`: prints Surprise me prompts with no API calls
 - **Commands**
   - Serve (needs gp-master beside it for the splitter): from a folder holding both repos, `python3 -m http.server 8000`, then open `http://localhost:8000/gp-randomash/`

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Randomash</title>
+<meta name="description" content="Blend genres, shape a Lyria 3 prompt, and generate instrumental clips and stems with the Gemini API.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎛️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><h1>Randomash</h1><span class="sub">Genre blender for Lyria 3</span></div>
+  <div class="topctl">
+    <label class="switch" title="Dry run shows the exact request without calling the API or spending anything">
+      <input type="checkbox" id="dry"><span class="track"></span><span>Dry run</span>
+    </label>
+    <button class="ghost" id="setBtn" aria-expanded="false" aria-controls="setPanel">API key &amp; output</button>
+  </div>
+</header>
+
+<section id="setPanel" class="card settings" hidden>
+  <div class="setgrid">
+    <div>
+      <label class="lbl" for="key">Gemini API key</label>
+      <div class="row">
+        <input type="password" id="key" autocomplete="off" spellcheck="false" placeholder="Paste your key">
+        <button class="ghost" id="keyShow" type="button">Show</button>
+        <button class="ghost" id="keyForget" type="button">Forget</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="keyRemember"><span>Remember the key on this device<small>Saved in this browser’s storage for this site. Unticked, the key lasts until you close the page. It is sent only to Google, in a request header.</small></span></label>
+      <p class="hint">Use a key made for this app. In Google Cloud, restrict it to the Generative Language API and to the referrers this page runs on (for example <code>gp-songtools.github.io/*</code> and <code>localhost</code>).</p>
+    </div>
+    <div>
+      <span class="lbl">Output folder</span>
+      <p class="hint" id="folderState">Clips are kept in this browser and offered as downloads.</p>
+      <div class="row">
+        <button class="ghost" id="folderPick" type="button">Choose folder…</button>
+        <button class="ghost" id="folderForget" type="button" hidden>Stop using folder</button>
+      </div>
+      <p class="hint" id="folderNote">With a folder chosen (Chrome or Edge), each run is written to <code>output/&lt;timestamp&gt;_&lt;slug&gt;/</code> and <code>history.json</code> is kept up to date there.</p>
+      <p class="hint">Model: <code id="modelId"></code> · about <span id="unitCost"></span> per clip (estimate).</p>
+    </div>
+  </div>
+</section>
+
+<div class="layout">
+<main>
+  <section class="mixbar card" aria-label="Current mix">
+    <div class="mixhead">
+      <h2>Current mix</h2>
+      <span class="clash" id="clash" hidden></span>
+      <span class="spacer"></span>
+      <button id="surprise" type="button">🎲 Surprise me</button>
+      <button class="ghost" id="clear" type="button">Clear</button>
+    </div>
+    <div id="mixChips" class="mixchips" aria-live="polite"></div>
+    <p class="warn" id="tooMany" hidden>More than 4 genres usually makes a muddy prompt. Lyria tends to average them out.</p>
+  </section>
+
+  <section class="card picker" aria-label="Genres">
+    <div class="pickhead">
+      <input type="search" id="search" placeholder="Search genres (Enter adds the first match)" autocomplete="off">
+      <button class="ghost" id="foldAll" type="button">Collapse all</button>
+    </div>
+    <div id="families"></div>
+    <p class="hint" id="noMatch" hidden>No genre matches that search.</p>
+  </section>
+
+  <section class="card controls" aria-label="Shape">
+    <div class="ctl">
+      <label class="lbl" for="tempo">Tempo <output id="tempoV"></output> BPM</label>
+      <input type="range" id="tempo" min="40" max="220" step="1">
+      <div class="hint row"><span id="tempoHint">Pick a genre to set a typical tempo.</span><button class="link" id="tempoReset" type="button" hidden>Reset to genre</button></div>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="energy">Energy <output id="energyV"></output></label>
+      <input type="range" id="energy" min="0" max="100" step="1">
+      <div class="hint row"><span>low</span><span class="spacer"></span><span>high</span></div>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="mood">Mood</label>
+      <select id="mood"></select>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Key feel</span>
+      <div class="seg" id="keyFeel" role="radiogroup" aria-label="Key feel"></div>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="arr">Arrangement</label>
+      <select id="arr"></select>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="seed">Seed</label>
+      <div class="row">
+        <input type="number" id="seed" min="0" max="2147483647" step="1">
+        <button class="ghost" id="seedRoll" type="button" title="New seed now">🎲</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="seedRandom"><span>New random seed for each generation</span></label>
+    </div>
+  </section>
+
+  <section class="card prompt" aria-label="Prompt">
+    <div class="row">
+      <label class="lbl" for="prompt">Lyria prompt</label>
+      <span class="badge" id="promptState">live</span>
+      <span class="spacer"></span>
+      <button class="link" id="promptReset" type="button" hidden>Reset to composed prompt</button>
+    </div>
+    <textarea id="prompt" rows="4" spellcheck="true" lang="en-US" placeholder="Pick at least one genre to compose a prompt."></textarea>
+    <p class="hint">US English only. Describe styles and instruments; don’t name real artists or ask to imitate a voice. Editing the text stops live updates until you reset.</p>
+
+    <div class="genrow">
+      <label class="chk"><input type="checkbox" id="stems"><span>Stems<small>Four separate generations with role prompts (drums, bass, chords and pads, melody) sharing tempo, key feel and seed. They are separate clips, so they may not line up perfectly.</small></span></label>
+      <label class="chk sub" id="splitRow"><input type="checkbox" id="split" disabled><span>Use the gp-master stem splitter instead<small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time.</small></span></label>
+    </div>
+    <div class="go">
+      <button id="gen" class="btn-go" type="button">Generate</button>
+      <button class="ghost" id="cancel" type="button" hidden>Cancel</button>
+      <span class="cost" id="cost"></span>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="refusal" id="refusal" role="alert" hidden></div>
+  </section>
+
+  <section class="card" id="resultCard" aria-label="Result" hidden>
+    <div class="row"><h2 id="resultTitle">Result</h2><span class="spacer"></span><span class="hint" id="resultMeta"></span></div>
+    <div id="result"></div>
+  </section>
+</main>
+
+<aside class="history card" aria-label="History">
+  <div class="row histhead">
+    <h2>History</h2><span class="spacer"></span>
+    <label class="chk tiny"><input type="checkbox" id="starOnly"><span>★ only</span></label>
+  </div>
+  <div class="row">
+    <button class="ghost small" id="histExport" type="button">Export history.json</button>
+    <label class="ghost small filebtn">Import<input type="file" id="histImport" accept="application/json,.json" hidden></label>
+  </div>
+  <ol id="history" class="hist"></ol>
+  <p class="hint" id="histEmpty">Runs you generate appear here. Click a run to restore its genres and settings.</p>
+</aside>
+</div>
+
+<iframe id="splitFrame" title="gp-master stem splitter" hidden></iframe>
+
+<script src="mix.js"></script>
+<script src="lyria.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body></html>

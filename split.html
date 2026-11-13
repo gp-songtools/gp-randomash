@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Randomash stem bridge</title>
+<script>
+/* Bridge to the gp-master stem splitter. gp-master's sep-pool.js starts its workers with
+   new Worker('./sep-worker.js'), which resolves against this document's base URL, so this
+   page sets <base> to the gp-master site before loading it. Nothing in gp-master is changed.
+   Both sites must share an origin (gp-songtools.github.io/gp-randomash and /gp-master,
+   or one local server whose root holds both folders). Override with ?gpm=/path/to/gp-master/ */
+(function () {
+  var q = new URLSearchParams(location.search).get('gpm') || '../gp-master/';
+  var u = new URL(q.replace(/\/?$/, '/'), location.href);
+  if (u.origin !== location.origin) u = new URL('../gp-master/', location.href);
+  var b = document.createElement('base'); b.href = u.href; document.head.appendChild(b);
+  window.GPM_BASE = u.href;
+})();
+</script>
+</head><body>
+<script>
+(function () {
+  var loaded = new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = GPM_BASE + 'sep-pool.js';
+    s.onload = function () { typeof separateParallel === 'function' ? res() : rej(new Error('sep-pool.js loaded but separateParallel is missing')); };
+    s.onerror = function () { rej(new Error('Could not load gp-master from ' + GPM_BASE + '. Is it served next to this app?')); };
+    document.body.appendChild(s);
+  });
+  var running = null;
+  function reply(m) { parent.postMessage(m, location.origin); }
+
+  addEventListener('message', function (e) {
+    if (e.origin !== location.origin || e.source !== parent) return;
+    var m = e.data || {};
+    if (m.type === 'ping') {
+      loaded.then(function () { reply({ type: 'pong', ok: true, base: GPM_BASE }); },
+                  function (err) { reply({ type: 'pong', ok: false, message: err.message, base: GPM_BASE }); });
+    } else if (m.type === 'cancel') {
+      if (running && running.abort) running.abort();
+    } else if (m.type === 'split') {
+      loaded.then(function () {
+        running = separateParallel({
+          mix: m.mix, stems: m.stems, sampleRate: m.sampleRate, baseUrl: GPM_BASE,
+          onStatus: function (t) { reply({ type: 'status', id: m.id, text: t }); },
+          onProgress: function (p) { reply({ type: 'progress', id: m.id, stem: p.stem, done: p.done, total: p.total }); }
+        });
+        return running;
+      }).then(function (r) {
+        running = null;
+        var tr = [];
+        for (var k in r.result) tr.push(r.result[k][0].buffer, r.result[k][1].buffer);
+        parent.postMessage({ type: 'done', id: m.id, result: r.result, sampleRate: r.sampleRate }, location.origin, tr);
+      }, function (err) {
+        running = null;
+        reply({ type: 'error', id: m.id, message: (err && err.message) || String(err) });
+      });
+    }
+  });
+})();
+</script>
+</body></html>

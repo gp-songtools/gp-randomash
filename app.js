@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const UIKEY = 'randomash.ui.v1', KEYKEY = 'randomash.key.v1';
+  const UIKEY = 'randomash.ui.v1', KEYKEY = 'randomash.key.v1', BALKEY = 'randomash.balance.v1';
   const lsGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
   const qs = new URLSearchParams(location.search);
@@ -30,6 +30,7 @@
     buildControls(); buildPicker(); loadUI(); loadKey(); wire();
     if (qs.get('dry') === '1') S.dry = true;
     applyStateToControls(); renderAll();
+    renderBalance();
     await initFolder(); await renderHistory();
   }
 
@@ -54,6 +55,37 @@
   function loadKey() {
     const k = lsGet(KEYKEY);
     if (k) { apiKey = k; $('key').value = k; $('keyRemember').checked = true; }
+  }
+
+  // ---------- prepay balance (estimate) ----------
+  /* { amount: what AI Studio showed, spent: estimated cost of clips since then, setAt } in
+     localStorage. Kept separately from history so deleting runs never "refunds" money. */
+  function balGet() {
+    try { const b = JSON.parse(lsGet(BALKEY) || 'null'); return b && Number.isFinite(b.amount) && Number.isFinite(b.spent) ? b : null; }
+    catch (_) { return null; }
+  }
+  const balLeft = () => { const b = balGet(); return b ? Math.round((b.amount - b.spent) * 100) / 100 : null; };
+  function balSpend(usd) { const b = balGet(); if (!b) return; b.spent = Math.round((b.spent + usd) * 10000) / 10000; lsSet(BALKEY, JSON.stringify(b)); renderBalance(); }
+  const money = v => (v < 0 ? '−$' : '$') + Math.abs(v).toFixed(2);
+
+  function renderBalance() {
+    const b = balGet(), left = balLeft(), badge = $('balBadge'), unit = Lyria.LYRIA.COST_PER_CLIP_USD;
+    $('balClear').hidden = !b;
+    if (!b) {
+      badge.hidden = true;
+      $('balState').textContent = 'Enter the balance AI Studio shows. The app subtracts its estimated cost for each clip and shows what’s left in the header. Only this browser stores it.';
+      renderCost(); return;
+    }
+    const clips = Math.max(0, Math.floor(left / unit + 1e-9));
+    badge.hidden = false;
+    badge.textContent = left > 0 ? `≈ ${money(left)} left` : `≈ ${money(left)} · top up`;
+    badge.className = 'bal' + (left <= 0 ? ' out' : left < unit * 10 ? ' low' : '');
+    badge.setAttribute('aria-label', `Estimated prepay balance ${money(left)}, about ${clips} clips. Click to update.`);
+    const when = new Date(b.setAt);
+    $('balState').textContent = `Set to ${money(b.amount)} on ${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. `
+      + `Since then about ${money(b.spent)} spent, so roughly ${money(left)} (${clips} clip${clips === 1 ? '' : 's'}) left. `
+      + 'This is an estimate: re-enter the figure from AI Studio now and then.';
+    renderCost();
   }
 
   // ---------- controls ----------
@@ -164,7 +196,8 @@
     const n = plannedCalls(), usd = n * Lyria.LYRIA.COST_PER_CLIP_USD;
     $('cost').textContent = S.dry
       ? `Dry run: no API call. A live run would be ${n} clip${n > 1 ? 's' : ''}, about $${usd.toFixed(2)}.`
-      : `Estimated cost: about $${usd.toFixed(2)} (${n} clip${n > 1 ? 's' : ''} × $${Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2)})`;
+      : `Estimated cost: about $${usd.toFixed(2)} (${n} clip${n > 1 ? 's' : ''} × $${Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2)})`
+        + (balLeft() != null ? ` · leaves about ${money(balLeft() - usd)}` : '');
     $('gen').disabled = busy || !$('prompt').value.trim();
   }
 
@@ -248,6 +281,16 @@
     $('keyRemember').onchange = e => lsSet(KEYKEY, e.target.checked && apiKey ? apiKey : null);
     $('keyShow').onclick = () => { const k = $('key'); k.type = k.type === 'password' ? 'text' : 'password'; $('keyShow').textContent = k.type === 'password' ? 'Show' : 'Hide'; };
     $('keyForget').onclick = () => { apiKey = ''; $('key').value = ''; $('keyRemember').checked = false; lsSet(KEYKEY, null); setStatus('Key removed from this page and from this browser’s storage.'); };
+    const balSet = () => {
+      const v = Math.round(parseFloat($('balIn').value) * 100) / 100;
+      if (!Number.isFinite(v) || v < 0) { setStatus('Enter the balance as a number, for example 4.12.', 'err'); $('balIn').focus(); return; }
+      lsSet(BALKEY, JSON.stringify({ amount: v, spent: 0, setAt: new Date().toISOString() }));
+      $('balIn').value = ''; renderBalance(); setStatus(`Balance set to ${money(v)}.`);
+    };
+    $('balSet').onclick = balSet;
+    $('balIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); balSet(); } });
+    $('balClear').onclick = () => { lsSet(BALKEY, null); renderBalance(); };
+    $('balBadge').onclick = () => { $('setPanel').hidden = false; $('setBtn').setAttribute('aria-expanded', true); $('balIn').focus(); };
     $('folderPick').onclick = async () => {
       try { await Store.chooseFolder(); await renderFolder(); setStatus('Output folder set. history.json written there.'); }
       catch (e) { if (e.name !== 'AbortError') setStatus('Could not use that folder: ' + e.message, 'err'); }
@@ -317,6 +360,11 @@
 
     if (S.dry) return dryRun(calls, mode, cost);
     if (!apiKey) { setStatus('Add your Gemini API key under “API key & output” first. Or turn on Dry run to preview requests.', 'err'); $('setPanel').hidden = false; $('key').focus(); return; }
+    const left = balLeft();
+    if (left != null && left - cost < 0 &&
+        !confirm(`This run costs about ${money(cost)}, but your estimated prepay balance is ${money(left)}.\n\nIf the balance has really run out, Google will refuse the request. Generate anyway?`)) {
+      setStatus('Not generated. Update the balance under “API key & output” if AI Studio shows more.'); return;
+    }
     if (Store.folderName()) { try { await Store.folderReady(true); } catch (_) {} }
 
     const now = new Date(), id = stamp(now) + '_' + runSlug();
@@ -325,7 +373,7 @@
       genres: S.genres.slice(), genreNames: S.genres.map(g => IDX.byId[g].name),
       sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, arrangement: S.arrangement },
       prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.LYRIA.MODEL, mode,
-      files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), rating: 0, starred: false, notes: ''
+      files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), spentUsd: 0, rating: 0, starred: false, notes: ''
     };
     currentRunId = id;
     setBusy(true); abortCtl = new AbortController();
@@ -336,6 +384,9 @@
         setStatus(`Generating ${c.label.toLowerCase()} (${i + 1} of ${calls.length}) · est. $${Lyria.LYRIA.COST_PER_CLIP_USD.toFixed(2)} for this clip…`, 'busy');
         try {
           const r = await Lyria.generate({ key: apiKey, prompt: c.prompt, seed: S.seed, signal: abortCtl.signal, onStatus: t => setStatus(t, 'busy') });
+          // A returned clip is billed; refusals and errors are assumed not to be.
+          run.spentUsd = Math.round((run.spentUsd + Lyria.LYRIA.COST_PER_CLIP_USD) * 10000) / 10000;
+          balSpend(Lyria.LYRIA.COST_PER_CLIP_USD);
           if (!r.seedSent) run.seedSent = false;
           if (r.text && !run.modelText.split('\n').includes(r.text)) run.modelText = (run.modelText ? run.modelText + '\n' : '') + r.text;
           await addFile(run, c, new Blob([r.bytes], { type: r.mime }), r.mime, out);

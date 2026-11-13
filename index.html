@@ -11,6 +11,7 @@
 <header class="top">
   <div class="brand"><h1>Randomash</h1><span class="sub">Genre blender for Lyria 3</span></div>
   <div class="topctl">
+    <button class="bal" id="balBadge" type="button" hidden title="Estimated prepay balance. Click to update it."></button>
     <label class="switch" title="Dry run shows the exact request without calling the API or spending anything">
       <input type="checkbox" id="dry"><span class="track"></span><span>Dry run</span>
     </label>
@@ -28,6 +29,13 @@
         <button class="ghost" id="keyForget" type="button">Forget</button>
       </div>
       <label class="chk"><input type="checkbox" id="keyRemember"><span>Remember the key on this device<small>Saved in this browser’s storage for this site. Unticked, the key lasts until you close the page. It is sent only to Google, in a request header.</small></span></label>
+      <label class="lbl" for="balIn" style="margin-top:14px">Prepay balance (from AI Studio → Billing)</label>
+      <div class="row">
+        <span class="dollar">$</span><input type="number" id="balIn" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 4.12" style="max-width:140px">
+        <button class="ghost" id="balSet" type="button">Set</button>
+        <button class="ghost" id="balClear" type="button" hidden>Clear</button>
+      </div>
+      <p class="hint" id="balState">Enter the balance AI Studio shows. The app subtracts its estimated cost for each clip and shows what’s left in the header. Only this browser stores it.</p>
       <p class="hint">Use a key made for this app. In Google Cloud, restrict it to the Generative Language API and to the referrers this page runs on (for example <code>gp-songtools.github.io/*</code> and <code>localhost</code>).</p>
     </div>
     <div>

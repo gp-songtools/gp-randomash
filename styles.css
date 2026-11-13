@@ -43,6 +43,10 @@ input[type=checkbox]{accent-color:var(--ac);width:18px;height:18px;margin:2px 0 
 .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sub{color:var(--mut);font-size:.9rem}
 .topctl{margin-left:auto;display:flex;gap:12px;align-items:center}
+.bal{background:transparent;color:var(--ink);border:1px solid var(--ln);font-size:.88rem;padding:4px 12px;font-variant-numeric:tabular-nums}
+.bal.low{border-color:var(--amber);color:var(--amber);background:var(--amberBg)}
+.bal.out{border-color:var(--warn);color:var(--warn)}
+.dollar{font-weight:600;color:var(--mut)}
 .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:.92rem}
 .switch input{position:absolute;opacity:0;width:1px;height:1px}
 .switch .track{width:38px;height:22px;border-radius:999px;background:var(--ln);position:relative;transition:background .15s}

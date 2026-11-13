@@ -47,7 +47,8 @@
       {"id": "doom", "name": "doom metal", "label": "doom", "bpm": [50, 75], "energy": 0.7, "acoustic": 0.55, "clash": 0.8, "instruments": ["downtuned crushing riffs", "slow pounding drums", "fuzz bass", "feedback drones"]},
       {"id": "hardcore", "name": "hardcore", "bpm": [150, 200], "energy": 1, "acoustic": 0.6, "clash": 0.85, "instruments": ["aggressive breakdown riffs", "blast-beat drums", "distorted bass", "gang-chant-style accents"]},
       {"id": "metalcore", "name": "metalcore", "bpm": [120, 180], "energy": 0.95, "acoustic": 0.55, "clash": 0.8, "instruments": ["chugging breakdown riffs", "melodic harmonized lead guitars", "double kick drums", "drop-tuned bass"]},
-      {"id": "death-metal", "name": "death metal", "label": "death", "bpm": [120, 220], "energy": 1.0, "acoustic": 0.55, "clash": 0.9, "instruments": ["low-tuned tremolo-picked riffs", "blast-beat drums", "growling distorted bass", "chromatic guitar leads"]}
+      {"id": "death-metal", "name": "death metal", "label": "death", "bpm": [120, 220], "energy": 1.0, "acoustic": 0.55, "clash": 0.9, "instruments": ["low-tuned tremolo-picked riffs", "blast-beat drums", "growling distorted bass", "chromatic guitar leads"]},
+      {"id": "nu-metal", "name": "nu-metal", "bpm": [90, 115], "energy": 0.85, "acoustic": 0.45, "clash": 0.7, "instruments": ["downtuned syncopated guitar riffs", "hip-hop-influenced grooves", "turntable scratches", "slap-heavy bass"]}
     ]},
     { "id": "jazz-blues", "name": "Jazz and blues", "near": ["hiphop-rnb", "folk-country", "world-fusion"], "genres": [
       {"id": "bebop", "name": "bebop", "bpm": [180, 280], "energy": 0.8, "acoustic": 0.95, "clash": 0.65, "instruments": ["fast alto saxophone lines", "walking upright bass", "ride-cymbal swing drums", "comping piano"]},

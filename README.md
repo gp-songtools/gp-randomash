@@ -47,7 +47,7 @@ node tools/dry-run.js 5
 
 **Current mix** (sticks to the top while you scroll). Your selected genres appear as chips in the order you clicked them. The first is labeled *primary* and the rest *secondary*. Each chip has **×** to remove it, and secondaries have **↑** to make them primary. A badge shows the mix's average **clash** score: *smooth* below 0.4, *interesting* from 0.4 to 0.7, *chaotic* above 0.7. With more than four genres, a warning says the prompt is likely to turn muddy. **🎲 Surprise me** picks 2–3 genres, weighted toward a clash between 0.4 and 0.7. **Clear** empties the mix.
 
-**Genre picker.** It holds 137 genres in 14 collapsible families: Electronic; Hip-hop and R&B; Rock; Metal; Jazz and blues; Folk and country; Latin and Caribbean; African; Asian; Middle Eastern and Balkan; Classical and film; Pop and dance; World fusion; Ambient and experimental. Each genre is a toggle chip. Inside the Rock and Metal families, chips drop the redundant word ("thrash" under Metal, "math" under Rock); the current-mix bar, prompts and history always use the full name ("thrash metal"), and search finds either. A selected chip is filled and shows its position in the mix, and each family heading shows how many of its genres are selected. The search box filters chips as you type and opens matching families. **Enter** adds the first match and **Esc** clears the search.
+**Genre picker.** It holds 138 genres in 14 collapsible families: Electronic; Hip-hop and R&B; Rock; Metal; Jazz and blues; Folk and country; Latin and Caribbean; African; Asian; Middle Eastern and Balkan; Classical and film; Pop and dance; World fusion; Ambient and experimental. Each genre is a toggle chip. Inside the Rock and Metal families, chips drop the redundant word ("thrash" under Metal, "math" under Rock); the current-mix bar, prompts and history always use the full name ("thrash metal"), and search finds either. A selected chip is filled and shows its position in the mix, and each family heading shows how many of its genres are selected. The search box filters chips as you type and opens matching families. **Enter** adds the first match and **Esc** clears the search.
 
 **Shape.**
 - **Tempo** is a BPM slider. It resets to the middle of the primary genre's typical range, which is shown underneath, when the primary changes.
@@ -145,7 +145,7 @@ gp-randomash/
 ├── lyria.js          Lyria/Gemini client: config, retries, refusal handling, response parsing
 ├── store.js          IndexedDB history and audio, output folder, history.json import/export
 ├── split.html        bridge that runs gp-master's splitter, unmodified, from the sibling site
-├── genres.json       137 genres in 14 families with BPM, clash, energy, acoustic, instruments
+├── genres.json       138 genres in 14 families with BPM, clash, energy, acoustic, instruments
 ├── tools/dry-run.js  prints Surprise me prompts from the terminal, no API calls
 ├── .nojekyll         serve files as-is on GitHub Pages
 └── README.md

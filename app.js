@@ -79,8 +79,10 @@
     const b = balGet(), left = balLeft(), badge = $('balBadge'), unit = unitCost();
     $('balClear').hidden = !b;
     if (!b) {
-      badge.hidden = true;
-      $('balState').textContent = 'Enter the balance AI Studio shows. The app subtracts its estimated cost for each clip and shows what’s left in the header. Only this browser stores it.';
+      badge.textContent = 'Set balance';
+      badge.className = 'bal unset';
+      badge.setAttribute('aria-label', 'No prepay balance set. Click to enter the balance from AI Studio.');
+      $('balState').textContent = 'Enter the balance AI Studio shows. The app subtracts its estimated cost for each clip and shows what’s left next to Current mix. Only this browser stores it.';
       renderCost(); return;
     }
     const clips = Math.max(0, Math.floor(left / unit + 1e-9));
@@ -316,7 +318,12 @@
     $('balSet').onclick = balSet;
     $('balIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); balSet(); } });
     $('balClear').onclick = () => { lsSet(BALKEY, null); renderBalance(); };
-    $('balBadge').onclick = () => { $('setPanel').hidden = false; $('setBtn').setAttribute('aria-expanded', true); $('balIn').focus(); };
+    // The badge lives in the sticky mix bar, so the settings panel may be scrolled out of view.
+    $('balBadge').onclick = () => {
+      $('setPanel').hidden = false; $('setBtn').setAttribute('aria-expanded', true);
+      $('setPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('balIn').focus({ preventScroll: true });
+    };
     $('folderPick').onclick = async () => {
       try { await Store.chooseFolder(); await renderFolder(); setStatus('Output folder set. history.json written there.'); }
       catch (e) { if (e.name !== 'AbortError') setStatus('Could not use that folder: ' + e.message, 'err'); }
@@ -806,7 +813,8 @@
     dry: ['Dry run', 'Shows the exact request that would be sent to Google, and what it would cost, without calling the API. Nothing is charged. Turn it off when you’re ready to generate for real.'],
     apikey: ['Gemini API key', 'Your key from Google AI Studio. It stays in this browser and is sent only to Google in a request header. Restrict it to the Generative Language API and this site in Google Cloud.'],
     remember: ['Remember the key', 'Keeps the key in this browser’s storage so you don’t have to paste it each visit. Leave it off on shared computers; Forget removes it.'],
-    balance: ['Prepay balance', 'Google has no way to read your balance automatically. Type the figure AI Studio shows; the app subtracts about $0.04 per clip or $0.08 per song and shows what’s left in the header. Only this browser sees it.'],
+    balance: ['Prepay balance', 'Google has no way to read your balance automatically. Type the figure AI Studio shows; the app subtracts about $0.04 per clip or $0.08 per song and shows what’s left next to Current mix. Only this browser sees it.'],
+    balanceBadge: ['Balance remaining', 'Your estimated Gemini prepay balance: the figure you entered minus about $0.04 per clip or $0.08 per song since then. Amber means under about 10 generations left, red means it’s used up. Click it to update the figure from AI Studio.'],
     folder: ['Output folder', 'Chrome or Edge only. Pick a folder and every run is written to output/<timestamp>_<genres>/, with history.json kept up to date beside it. Without one, clips stay in this browser with download links.'],
     mix: ['Current mix', 'The genres you picked, in order. The first is the primary style and leads the prompt; the rest are blended in as secondary elements. ↑ makes one primary, × removes it. The clash badge shows how far apart they are.'],
     surprise: ['Surprise me', 'Picks 2–3 random genres, weighted toward a clash score of 0.4–0.7: different enough to be interesting, close enough not to be noise. Your other settings stay as they are.'],

@@ -51,6 +51,8 @@ button.info:hover,button.info[aria-describedby]{border-color:var(--ac);color:var
 .sub{color:var(--mut);font-size:.9rem}
 .topctl{margin-left:auto;display:flex;gap:12px;align-items:center}
 .bal{background:transparent;color:var(--ink);border:1px solid var(--ln);font-size:.88rem;padding:4px 12px;font-variant-numeric:tabular-nums}
+.balwrap{display:inline-flex;align-items:center}
+.bal.unset{color:var(--mut);border-style:dashed}
 .bal.low{border-color:var(--amber);color:var(--amber);background:var(--amberBg)}
 .bal.out{border-color:var(--warn);color:var(--warn)}
 .dollar{font-weight:600;color:var(--mut)}

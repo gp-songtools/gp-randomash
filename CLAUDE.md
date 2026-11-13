@@ -28,6 +28,7 @@
   - No limit on genres per family (owner's decision); don't pad or trim families to a size
   - Genre `name` is the full term used in prompts, history and the mix bar; optional `label` is the shorter chip text inside its family (e.g. "thrash" under Metal); search matches both
   - Update `README.md` when a user-facing feature is added or renamed
+  - Genre chips show a prompt-contribution popup (`chipTip` in app.js) that must mirror `Mix.composePrompt` and `instrumentsFor`; update both together
   - Every field gets an ⓘ: `<button type="button" class="info" data-info="key">` plus an `INFO[key]` entry (title, explanation) in `app.js`; keep the text in step when a field's behavior changes
 - **Git**
   - Pushing directly to `main` is allowed (owner's instruction); fetch first and push only as a fast-forward

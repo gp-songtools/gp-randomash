@@ -115,7 +115,7 @@
     $('families').innerHTML = IDX.families.map(f => `
       <details class="fam" open data-fam="${f.id}">
         <summary>${esc(f.name)} <span class="n">${f.genres.length}</span><span class="sel" hidden></span></summary>
-        <div class="chips">${f.genres.map(g => `<button type="button" class="chip" data-id="${g.id}" aria-pressed="false" aria-label="${esc(g.name)}" title="${esc(g.name)} · typical ${g.bpm[0]}–${g.bpm[1]} BPM">${esc(g.label || g.name)}</button>`).join('')}</div>
+        <div class="chips">${f.genres.map(g => `<button type="button" class="chip" data-id="${g.id}" aria-pressed="false" aria-label="${esc(g.name)}">${esc(g.label || g.name)}</button>`).join('')}</div>
       </details>`).join('');
   }
 
@@ -848,10 +848,28 @@
       b.dataset.ready = 1; b.textContent = 'i'; b.setAttribute('aria-label', 'About ' + t[0]);
     });
   }
+  /* What a genre chip adds to the prompt, as primary and as secondary. Mirrors Mix.composePrompt:
+     a primary contributes its name, tempo and first two instruments (three when alone);
+     a secondary contributes "blended with … elements" and its first instrument. */
+  function chipTip(id) {
+    const g = IDX && IDX.byId[id]; if (!g) return null;
+    const pos = S.genres.indexOf(id), mood = S.mood[0].toUpperCase() + S.mood.slice(1);
+    const lines = [];
+    if (pos === 0) lines.push('In your mix now as the primary genre.');
+    else if (pos > 0) lines.push('In your mix now as a secondary genre.');
+    lines.push(`As primary: “${mood} ${g.name} track…”, tempo set to ${Mix.defaultTempo(g)} BPM, featuring ${g.instruments[0]} and ${g.instruments[1]} (plus ${g.instruments[2]} when it’s the only genre).`);
+    lines.push(`As secondary: “…blended with ${g.name} elements…”, adding ${g.instruments[0]}.`);
+    return [`${g.name} · ${g.bpm[0]}–${g.bpm[1]} BPM · ${g.familyName}`, lines];
+  }
+  function tipContent(b) {
+    if (b.classList.contains('chip')) return chipTip(b.dataset.id);
+    const t = INFO[b.dataset.info]; if (!t) return null;
+    return [t[0], [t[1].replace('{n}', IDX ? IDX.list.length : 'All').replace('{f}', IDX ? IDX.families.length : 'their')]];
+  }
   function showTip(b) {
-    const t = INFO[b.dataset.info]; if (!t) return;
-    const body = t[1].replace('{n}', IDX ? IDX.list.length : 'All').replace('{f}', IDX ? IDX.families.length : 'their');
-    tip.innerHTML = `<b>${esc(t[0])}</b>${esc(body)}`;
+    const t = tipContent(b); if (!t) return;
+    tip.innerHTML = `<b>${esc(t[0])}</b>` + t[1].map(esc).join('<br>');
+    tip.classList.toggle('wide', b.classList.contains('chip'));
     if (tip.hidden || tipFor !== b) tipShownAt = Date.now();
     tip.hidden = false; tipFor = b; b.setAttribute('aria-describedby', 'tip');
     const r = b.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
@@ -861,10 +879,21 @@
     tip.style.top = Math.max(m, y) + 'px';
   }
   function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tip.hidden = true; tipFor = null; }
-  document.addEventListener('pointerover', e => { const b = e.target.closest('button.info'); if (b && e.pointerType !== 'touch') showTip(b); });
-  document.addEventListener('pointerout', e => { const b = e.target.closest('button.info'); if (b && e.pointerType !== 'touch' && !b.contains(e.relatedTarget)) hideTip(); });
-  document.addEventListener('focusin', e => { if (e.target.matches('button.info')) showTip(e.target); });
-  document.addEventListener('focusout', e => { if (e.target.matches('button.info')) hideTip(); });
+  // ⓘ buttons show at once; genre chips after a short pause so sweeping the mouse across the grid
+  // doesn't flash popups. Touch: ⓘ opens on tap (below); a chip tap just selects it, no popup.
+  let chipTimer = null;
+  const TIPPABLE = 'button.info, #families .chip';
+  document.addEventListener('pointerover', e => {
+    const b = e.target.closest(TIPPABLE); if (!b || e.pointerType === 'touch') return;
+    clearTimeout(chipTimer);
+    if (b.classList.contains('chip')) chipTimer = setTimeout(() => showTip(b), 350); else showTip(b);
+  });
+  document.addEventListener('pointerout', e => {
+    const b = e.target.closest(TIPPABLE);
+    if (b && e.pointerType !== 'touch' && !b.contains(e.relatedTarget)) { clearTimeout(chipTimer); hideTip(); }
+  });
+  document.addEventListener('focusin', e => { if (e.target.matches(TIPPABLE)) showTip(e.target); });
+  document.addEventListener('focusout', e => { if (e.target.matches(TIPPABLE)) hideTip(); });
   document.addEventListener('click', e => {
     const b = e.target.closest('button.info');
     if (b) {
@@ -872,6 +901,9 @@
       // A tap focuses the button (showing the tip) and then clicks it: only a later tap closes it.
       const fresh = Date.now() - tipShownAt < 400;
       if (tipFor === b && !tip.hidden && !fresh && e.pointerType !== 'mouse') hideTip(); else showTip(b);
+    }
+    else if (e.target.closest('#families .chip') && e.pointerType === 'mouse') {
+      const c = e.target.closest('.chip'); setTimeout(() => showTip(c), 0);   // refresh "in your mix now" after the toggle
     }
     else if (!e.target.closest('#tip')) hideTip();
   }, true);

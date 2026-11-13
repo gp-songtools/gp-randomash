@@ -37,7 +37,9 @@
       {"id":  "post-rock", "name":  "post-rock", "bpm":  [70, 130], "energy":  0.55, "acoustic":  0.6, "clash":  0.3, "instruments":  ["delay-drenched guitars", "swelling crescendos", "tom-heavy drums", "glockenspiel"]},
       {"id":  "garage-rock", "name":  "garage rock", "bpm":  [120, 160], "energy":  0.8, "acoustic":  0.65, "clash":  0.5, "instruments":  ["fuzzy guitar riffs", "Farfisa-style organ", "trashy drums", "raw bass"]},
       {"id":  "psych-rock", "name":  "psychedelic rock", "bpm":  [80, 130], "energy":  0.6, "acoustic":  0.6, "clash":  0.4, "instruments":  ["wah guitar", "phased drums", "sitar-like drones", "swirling organ"]},
-      {"id":  "math-rock", "name":  "math rock", "bpm":  [110, 160], "energy":  0.7, "acoustic":  0.65, "clash":  0.6, "instruments":  ["tapped clean guitar lines", "odd-meter drums", "melodic bass", "intricate rhythm changes"]}
+      {"id":  "math-rock", "name":  "math rock", "bpm":  [110, 160], "energy":  0.7, "acoustic":  0.65, "clash":  0.6, "instruments":  ["tapped clean guitar lines", "odd-meter drums", "melodic bass", "intricate rhythm changes"]},
+      {"id":  "prog-rock", "name":  "progressive rock", "bpm":  [70, 160], "energy":  0.6, "acoustic":  0.65, "clash":  0.55, "instruments":  ["shifting odd-meter drums", "Mellotron and Hammond organ", "virtuosic synth and guitar solos", "melodic bass guitar"]},
+      {"id":  "industrial", "name":  "industrial", "bpm":  [100, 140], "energy":  0.85, "acoustic":  0.3, "clash":  0.75, "instruments":  ["clanging metallic percussion", "distorted drum machine", "harsh synth stabs", "noisy guitar textures"]}
     ]},
     { "id": "metal", "name": "Metal", "near": ["rock"], "genres": [
       {"id":  "metal", "name":  "metal", "bpm":  [100, 180], "energy":  0.95, "acoustic":  0.55, "clash":  0.8, "instruments":  ["palm-muted distorted guitars", "double kick drums", "shredding guitar lead", "heavy bass"]},

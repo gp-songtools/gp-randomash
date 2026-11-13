@@ -32,9 +32,31 @@
   ];
   const rootById = id => KEY_ROOTS.find(r => r.id === id);
 
-  // Key clause: feel alone when no root is chosen (Lyria picks the key), otherwise feel + root.
-  function keyClause(key, root) {
-    const r = rootById(root);
+  /* The seven modes, brightest to darkest, each with a one-word mood for the menu.
+     `minorish` modes (flat third) use the minor spelling of the root, e.g. C-sharp Dorian. */
+  const MODES = [
+    { id: 'lydian',     name: 'Lydian',     mood: 'dreamy',      minorish: false },
+    { id: 'ionian',     name: 'Ionian',     mood: 'bright',      minorish: false },
+    { id: 'mixolydian', name: 'Mixolydian', mood: 'bluesy',      minorish: false },
+    { id: 'dorian',     name: 'Dorian',     mood: 'soulful',     minorish: true },
+    { id: 'aeolian',    name: 'Aeolian',    mood: 'melancholic', minorish: true },
+    { id: 'phrygian',   name: 'Phrygian',   mood: 'tense',       minorish: true },
+    { id: 'locrian',    name: 'Locrian',    mood: 'unstable',    minorish: true }
+  ];
+  const modeById = id => MODES.find(m => m.id === id);
+
+  // Short label for history, e.g. "G♯/A♭ major", "D Dorian", "Dorian", "" when nothing specific.
+  function keyLabel(key, root, mode) {
+    const r = rootById(root), m = key === 'modal' && modeById(mode);
+    if (m) return (r ? r.ui + ' ' : '') + m.name;
+    return r ? r.ui + ' ' + key : '';
+  }
+
+  /* Key clause: feel alone when no root is chosen (Lyria picks the key), otherwise feel + root.
+     With Modal, a chosen mode is named ("in D Dorian mode" / "in the Dorian mode"). */
+  function keyClause(key, root, mode) {
+    const r = rootById(root), m = key === 'modal' && modeById(mode);
+    if (m) return r ? `in ${m.minorish ? r.minor : r.major} ${m.name} mode` : `in the ${m.name} mode`;
     if (!r) return KEY_FEELS[key] || KEY_FEELS.minor;
     if (key === 'major') return 'in ' + r.major + ' major';
     if (key === 'modal') return 'with modal harmony centered on ' + r.major;
@@ -174,7 +196,7 @@
     const parts = [head,
       Math.round(s.tempo) + ' BPM',
       energyWord(s.energy) + ' energy',
-      keyClause(s.key, s.root),
+      keyClause(s.key, s.root, s.mode),
       role ? role.text : 'featuring ' + joinList(instrumentsFor(gs)),
       ARRANGEMENTS[s.arrangement] || '',
       'instrumental', s.lengthText || '30 seconds', 'clean stereo mix'];
@@ -194,7 +216,7 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max || 48).replace(/-+$/, '') || 'mix';
   }
 
-  const api = { MOODS, KEY_FEELS, KEY_ROOTS, keyClause, ARRANGEMENTS, STEM_ROLES, energyWord, index, bpmGap, pairClash, mixClash,
+  const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, energyWord, index, bpmGap, pairClash, mixClash,
     clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, slug };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Mix = api;

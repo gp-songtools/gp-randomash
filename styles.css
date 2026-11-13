@@ -36,6 +36,13 @@ input[type=checkbox]{accent-color:var(--ac);width:18px;height:18px;margin:2px 0 
 .chk small{display:block;color:var(--mut);font-size:.82rem}
 .chk.sub{margin-left:26px}
 .chk.tiny{margin:0;font-size:.85rem}
+/* info buttons and the shared tooltip */
+button.info{display:inline-grid;place-items:center;width:18px;height:18px;padding:0;margin:0 0 0 4px;border-radius:50%;
+  border:1px solid var(--mut);background:transparent;color:var(--mut);font:italic 700 11px/1 Georgia,serif;vertical-align:middle;flex:none;cursor:help}
+button.info:hover,button.info[aria-describedby]{border-color:var(--ac);color:var(--acf);background:var(--ac)}
+#tip{position:fixed;z-index:50;max-width:min(320px,calc(100vw - 16px));background:var(--ink);color:var(--bg);border-radius:10px;
+  padding:10px 12px;font-size:.86rem;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none}
+#tip b{display:block;margin-bottom:2px}
 .warn{color:var(--amber);background:var(--amberBg);border-radius:8px;padding:6px 10px;margin:8px 0 0;font-size:.9rem}
 
 /* header */

@@ -26,6 +26,7 @@
   - Match the gp-master palette and font; colors only via CSS vars on `:root` with the dark-mode overrides
   - Do not modify `gp-songtools/gp-master` without asking the owner; Randomash uses its files as published
   - Update `README.md` when a user-facing feature is added or renamed
+  - Every field gets an ⓘ: `<button type="button" class="info" data-info="key">` plus an `INFO[key]` entry (title, explanation) in `app.js`; keep the text in step when a field's behavior changes
 - **Git**
   - Pushing directly to `main` is allowed (owner's instruction); fetch first and push only as a fast-forward
   - Never force-push `main`; if it has diverged, stop and ask

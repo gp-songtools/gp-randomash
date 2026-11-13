@@ -11,7 +11,7 @@
   // ---------- state ----------
   let IDX = null;
   const S = {
-    genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', root: '', arrangement: 'none',
+    genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', root: '', mode: '', arrangement: 'none',
     seed: randSeed(), seedRandom: true, stems: false, split: false, dry: true, length: Lyria.LYRIA.DEFAULT_LENGTH,
     promptEdited: false, prompt: ''
   };
@@ -47,6 +47,7 @@
       if (Mix.MOODS.includes(u.mood)) S.mood = u.mood;
       if (Mix.KEY_FEELS[u.key]) S.key = u.key;
       if (Mix.KEY_ROOTS.some(r => r.id === u.root)) S.root = u.root;
+      if (Mix.MODES.some(m => m.id === u.mode)) S.mode = u.mode;
       if (u.arrangement in Mix.ARRANGEMENTS) S.arrangement = u.arrangement;
       if (Lyria.LYRIA.LENGTHS[u.length]) S.length = u.length;
       for (const k of ['seedRandom', 'stems', 'split', 'dry', 'promptEdited']) if (typeof u[k] === 'boolean') S[k] = u[k];
@@ -101,6 +102,7 @@
     const kf = { major: 'Major', minor: 'Minor', modal: 'Modal', ambiguous: 'Ambiguous' };
     $('keyFeel').innerHTML = Object.keys(kf).map(k => `<label><input type="radio" name="keyFeel" value="${k}"><span>${kf[k]}</span></label>`).join('');
     $('root').innerHTML = '<option value="">Any key (Lyria chooses)</option>' + Mix.KEY_ROOTS.map(r => `<option value="${r.id}">${r.ui}</option>`).join('');
+    $('mode').innerHTML = '<option value="">Any mode (Lyria chooses)</option>' + Mix.MODES.map(m => `<option value="${m.id}">${m.name} · ${m.mood}</option>`).join('');
     $('lengthSeg').innerHTML = Object.entries(Lyria.LYRIA.LENGTHS).map(([k, L]) =>
       `<label><input type="radio" name="length" value="${k}"><span>${esc(L.label)} · ${esc(L.detail)} · $${L.costUsd.toFixed(2)}</span></label>`).join('');
     const ar = { none: 'None', buildup: 'Build-up', drop: 'Drop', stripped: 'Stripped-down', loop: 'Loop-friendly' };
@@ -116,7 +118,7 @@
   }
 
   function applyStateToControls() {
-    $('tempo').value = S.tempo; $('energy').value = S.energy; $('mood').value = S.mood; $('arr').value = S.arrangement; $('root').value = S.root;
+    $('tempo').value = S.tempo; $('energy').value = S.energy; $('mood').value = S.mood; $('arr').value = S.arrangement; $('root').value = S.root; $('mode').value = S.mode;
     const r = document.querySelector(`#keyFeel input[value="${S.key}"]`); if (r) r.checked = true;
     const l = document.querySelector(`#lengthSeg input[value="${S.length}"]`); if (l) l.checked = true;
     $('seed').value = S.seed; $('seedRandom').checked = S.seedRandom;
@@ -187,6 +189,7 @@
     $('split').disabled = !S.stems;
     $('splitRow').style.opacity = S.stems ? 1 : .55;
     document.body.classList.toggle('dry', S.dry);
+    $('modeRow').hidden = S.key !== 'modal';
     $('lengthNote').textContent = S.length === 'full'
       ? 'Full songs cost twice as much and take longer to generate. There is no exact-length setting; the model decides, typically 2–3 minutes.'
       : 'Clips are always 30 seconds. Use Trim on a result to cut a shorter loop (the full clip is still billed).';
@@ -273,6 +276,7 @@
     $('mood').onchange = e => { S.mood = e.target.value; renderAll(); };
     $('keyFeel').onchange = e => { S.key = e.target.value; renderAll(); };
     $('root').onchange = e => { S.root = e.target.value; renderAll(); };
+    $('mode').onchange = e => { S.mode = e.target.value; renderAll(); };
     $('arr').onchange = e => { S.arrangement = e.target.value; renderAll(); };
     $('lengthSeg').onchange = e => {
       const from = LEN().promptLength;
@@ -393,7 +397,7 @@
     const run = {
       id, timestamp: now.toISOString(),
       genres: S.genres.slice(), genreNames: S.genres.map(g => IDX.byId[g].name),
-      sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, root: S.root, arrangement: S.arrangement },
+      sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, root: S.root, mode: S.key === 'modal' ? S.mode : '', arrangement: S.arrangement },
       prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.modelFor(length), length, mode,
       files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), spentUsd: 0, rating: 0, starred: false, notes: ''
     };
@@ -562,7 +566,7 @@
       <canvas aria-label="Waveform. Click to seek, drag to select a region to trim."></canvas>
       <span class="tm">0:00 / –:––</span>
       <div class="dl"><a href="${url}" download="${esc(f.file)}">Download ${esc(f.file)}</a>
-        <button type="button" class="link" data-trim aria-expanded="false">✂ Trim</button>
+        <button type="button" class="link" data-trim aria-expanded="false">✂ Trim</button><button type="button" class="info" data-info="trim"></button>
         ${f.prompt ? '<span class="hint" style="margin:0" title="' + esc(f.prompt) + '">prompt ▸ hover</span>' : ''}</div>
       <div class="trim" hidden>
         <div class="row">
@@ -727,7 +731,7 @@
           <button type="button" class="star${r.starred ? ' on' : ''}" data-act="star" aria-pressed="${!!r.starred}" aria-label="Star">${r.starred ? '★' : '☆'}</button>
           <button type="button" class="main" data-act="restore" title="Restore these genres and settings">
             <span class="gn">${esc((r.genreNames || r.genres || []).join(' + '))}</span>
-            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM${(() => { const k = Mix.KEY_ROOTS.find(x => x.id === sl.root); return k ? ' · ' + esc(k.ui) + ' ' + esc(sl.key || '') : ''; })()} · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
+            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM${(() => { const k = Mix.keyLabel(sl.key, sl.root, sl.mode); return k ? ' · ' + esc(k) : ''; })()} · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
           </button>
         </div>
         <div class="row" style="margin-top:4px">
@@ -782,6 +786,7 @@
     if (Mix.MOODS.includes(sl.mood)) S.mood = sl.mood;
     if (Mix.KEY_FEELS[sl.key]) S.key = sl.key;
     S.root = Mix.KEY_ROOTS.some(x => x.id === sl.root) ? sl.root : '';   // older runs had no root: Lyria chose
+    S.mode = Mix.MODES.some(x => x.id === sl.mode) ? sl.mode : '';
     if (sl.arrangement in Mix.ARRANGEMENTS) S.arrangement = sl.arrangement;
     S.seed = r.seed | 0; S.seedRandom = false;
     S.stems = r.mode === 'stems' || r.mode === 'mix+split'; S.split = r.mode === 'mix+split';
@@ -793,6 +798,84 @@
     setStatus(`Restored ${r.genreNames ? r.genreNames.join(' + ') : 'run'} with seed ${r.seed} locked. Tweak and generate again.`);
     document.querySelector('.mixbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  // ---------- info tooltips ----------
+  /* Every <button class="info" data-info="key"> shows INFO[key] in one shared popup (#tip):
+     on hover and keyboard focus, or on tap for touch screens. Esc, scrolling or moving away hides it. */
+  const INFO = {
+    dry: ['Dry run', 'Shows the exact request that would be sent to Google, and what it would cost, without calling the API. Nothing is charged. Turn it off when you’re ready to generate for real.'],
+    apikey: ['Gemini API key', 'Your key from Google AI Studio. It stays in this browser and is sent only to Google in a request header. Restrict it to the Generative Language API and this site in Google Cloud.'],
+    remember: ['Remember the key', 'Keeps the key in this browser’s storage so you don’t have to paste it each visit. Leave it off on shared computers; Forget removes it.'],
+    balance: ['Prepay balance', 'Google has no way to read your balance automatically. Type the figure AI Studio shows; the app subtracts about $0.04 per clip or $0.08 per song and shows what’s left in the header. Only this browser sees it.'],
+    folder: ['Output folder', 'Chrome or Edge only. Pick a folder and every run is written to output/<timestamp>_<genres>/, with history.json kept up to date beside it. Without one, clips stay in this browser with download links.'],
+    mix: ['Current mix', 'The genres you picked, in order. The first is the primary style and leads the prompt; the rest are blended in as secondary elements. ↑ makes one primary, × removes it. The clash badge shows how far apart they are.'],
+    surprise: ['Surprise me', 'Picks 2–3 random genres, weighted toward a clash score of 0.4–0.7: different enough to be interesting, close enough not to be noise. Your other settings stay as they are.'],
+    genres: ['Genres', '127 genres in 13 families. Click a chip to add or remove it; the number on a chip is its place in the mix. Type in search to filter; Enter adds the first match, Esc clears. Collapse all folds the families.'],
+    tempo: ['Tempo', 'Beats per minute. It jumps to the middle of the primary genre’s typical range when the primary changes; the hint shows that range. Trim also uses it to snap to bars and beats.'],
+    energy: ['Energy', 'How intense the track is, from low (calm, sparse) to high (driving, dense). It becomes “low energy”, “medium energy” and so on in the prompt.'],
+    mood: ['Mood', 'The emotional color of the track. It’s the first word of the prompt, e.g. “Dreamy house track…”.'],
+    key: ['Key', 'Major sounds bright, minor darker, modal uses one of the seven modes, ambiguous avoids a clear home key. Add a key from the menu below, or leave it on Any to let Lyria choose.'],
+    root: ['Key menu', 'The home note. Any key lets Lyria choose. A chosen key is spelled the way musicians write it for that scale, e.g. D-flat major but C-sharp minor. Stems all share it.'],
+    mode: ['Mode', 'Shown when Modal is selected. The seven modes run from brightest (Lydian, dreamy) to darkest (Locrian, unstable). Ionian is the same as major and Aeolian the same as natural minor. Any mode lets Lyria choose.'],
+    arrangement: ['Arrangement', 'The track’s shape: a gradual build-up, building to a drop, stripped-down, or loop-friendly with a steady groove. None leaves it to the model.'],
+    seed: ['Seed', 'The model’s dice roll. The style comes from the prompt; the seed picks which take you get. Same prompt + same seed gives the same track again, so lock it to hear the effect of changing one setting.'],
+    seedRandom: ['New random seed', 'On: every Generate rolls a new seed, so you get a different track from the same recipe. Off: the seed is locked. Restoring a run from history locks its seed.'],
+    prompt: ['Lyria prompt', 'The text sent to Lyria, rebuilt live from your choices. You can edit it directly; live updates then pause until you press Reset. English only, and don’t name real artists.'],
+    length: ['Length', 'Clip: always 30 seconds, about $0.04. Full song: about 2–3 minutes, about $0.08. You pay per generation, not per second, so trimming afterwards doesn’t lower the cost.'],
+    stems: ['Stems', 'Makes four separate generations (drums, bass, chords and pads, melody) with the same tempo, key and seed. Four times the cost, and as separate takes they may not line up perfectly.'],
+    split: ['gp-master splitter', 'Generates one mix, then separates drums, bass and “other” in your browser with gp-master. Costs one generation and the parts line up exactly. Downloads about 60 MB of models the first time.'],
+    generate: ['Generate and cost', 'Sends the prompt to Lyria. The estimate shows the cost before you click, and what your balance would be afterwards. Requests run one at a time; Cancel stops the rest.'],
+    history: ['History', 'Every run you generate, newest first. Click one to restore its genres, settings, key and seed. ☆ stars a run, the 1–5 stars rate it, and the notes box is for your comments.'],
+    starOnly: ['★ only', 'Show only runs you’ve starred.'],
+    exportImport: ['Export and import', 'Export saves your history (settings, prompts, ratings, notes) as history.json. Import merges one back in. Audio isn’t included; it stays in the browser that made it.'],
+    trim: ['Trim', 'Drag across the waveform to pick a region; it snaps to bars or beats at the run’s tempo. Loop region plays it on repeat; Save trimmed WAV adds the cut to this run. Free, as it all happens in your browser.']
+  };
+  const tip = $('tip');
+  let tipFor = null, tipShownAt = 0;
+  function initInfo(root) {
+    (root || document).querySelectorAll('button.info:not([data-ready])').forEach(b => {
+      const t = INFO[b.dataset.info];
+      if (!t) return;
+      b.dataset.ready = 1; b.textContent = 'i'; b.setAttribute('aria-label', 'About ' + t[0]);
+    });
+  }
+  function showTip(b) {
+    const t = INFO[b.dataset.info]; if (!t) return;
+    tip.innerHTML = `<b>${esc(t[0])}</b>${esc(t[1])}`;
+    if (tip.hidden || tipFor !== b) tipShownAt = Date.now();
+    tip.hidden = false; tipFor = b; b.setAttribute('aria-describedby', 'tip');
+    const r = b.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
+    let x = r.left + r.width / 2 - w / 2, y = r.bottom + 8;
+    if (y + h > innerHeight - m) y = r.top - h - 8;
+    tip.style.left = Math.max(m, Math.min(x, innerWidth - w - m)) + 'px';
+    tip.style.top = Math.max(m, y) + 'px';
+  }
+  function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tip.hidden = true; tipFor = null; }
+  document.addEventListener('pointerover', e => { const b = e.target.closest('button.info'); if (b && e.pointerType !== 'touch') showTip(b); });
+  document.addEventListener('pointerout', e => { const b = e.target.closest('button.info'); if (b && e.pointerType !== 'touch' && !b.contains(e.relatedTarget)) hideTip(); });
+  document.addEventListener('focusin', e => { if (e.target.matches('button.info')) showTip(e.target); });
+  document.addEventListener('focusout', e => { if (e.target.matches('button.info')) hideTip(); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button.info');
+    if (b) {
+      e.preventDefault(); e.stopPropagation();   // never toggles the checkbox label it sits in
+      // A tap focuses the button (showing the tip) and then clicks it: only a later tap closes it.
+      const fresh = Date.now() - tipShownAt < 400;
+      if (tipFor === b && !tip.hidden && !fresh && e.pointerType !== 'mouse') hideTip(); else showTip(b);
+    }
+    else if (!e.target.closest('#tip')) hideTip();
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+  // Follow the button while the page scrolls; hide once it leaves the screen.
+  const retip = () => {
+    if (!tipFor || tip.hidden) return;
+    const r = tipFor.getBoundingClientRect();
+    if (!tipFor.isConnected || r.bottom < 0 || r.top > innerHeight) hideTip(); else showTip(tipFor);
+  };
+  addEventListener('scroll', retip, { passive: true, capture: true });
+  addEventListener('resize', retip);
+  new MutationObserver(() => initInfo()).observe(document.body, { childList: true, subtree: true });
+  initInfo();
 
   // test hooks (harmless in production)
   window.Randomash = { state: S, setGenres, surprise: () => $('surprise').click(), composed };

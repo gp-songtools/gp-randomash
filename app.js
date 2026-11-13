@@ -22,6 +22,8 @@
   const unitCost = () => LEN().costUsd;
   // State as the prompt template sees it: adds the length wording for the chosen option.
   const ps = () => Object.assign({}, S, { lengthText: LEN().promptLength });
+  // The vocal style the primary genre brings (genre's own, else its family's).
+  const primaryVocals = () => Mix.vocalStyle(IDX && IDX.byId[S.genres[0]]);
 
   // ---------- boot ----------
   async function boot() {
@@ -293,9 +295,10 @@
     $('seedRandom').onchange = e => { S.seedRandom = e.target.checked; saveUI(); };
     $('vocals').onchange = e => {
       S.vocals = e.target.checked;
-      // Keep an edited prompt in step, as with Length.
-      const [from, to] = S.vocals ? [Mix.VOICE.off, Mix.VOICE.on] : [Mix.VOICE.on, Mix.VOICE.off];
-      if (S.promptEdited && S.prompt.includes(', ' + from + ',')) { S.prompt = S.prompt.replace(', ' + from + ',', ', ' + to + ','); $('prompt').value = S.prompt; }
+      // Keep an edited prompt in step, as with Length: swap the voice clause for the primary genre's style.
+      if (S.promptEdited && Mix.voiceIn(S.prompt)) {
+        S.prompt = Mix.setVoice(S.prompt, S.vocals ? primaryVocals() : Mix.VOICE.off); $('prompt').value = S.prompt;
+      }
       renderAll();
     };
     $('stems').onchange = e => { S.stems = e.target.checked; renderAll(); };
@@ -378,7 +381,7 @@
     if (!S.stems || S.split) return [{ role: 'mix', label: 'Full mix', prompt }];
     return Mix.rolesFor(S).map(r => ({
       role: r.id, label: r.label,
-      prompt: S.promptEdited ? Mix.rolePromptFrom(prompt, r) : Mix.composePrompt(IDX, ps(), r)
+      prompt: S.promptEdited ? Mix.rolePromptFrom(prompt, r, primaryVocals()) : Mix.composePrompt(IDX, ps(), r)
     }));
   }
 
@@ -844,7 +847,7 @@
     seedRandom: ['New random seed', 'On: every Generate rolls a new seed, so you get a different track from the same recipe. Off: the seed is locked. Restoring a run from history locks its seed.'],
     prompt: ['Lyria prompt', 'The text sent to Lyria, rebuilt live from your choices. You can edit it directly; live updates then pause until you press Reset. English only, and don’t name real artists.'],
     length: ['Length', 'Clip: always 30 seconds, about $0.04. Full song: about 2–3 minutes, about $0.08. You pay per generation, not per second, so trimming afterwards doesn’t lower the cost.'],
-    vocals: ['Vocals', 'Off: the prompt says “instrumental”. On: it says “with vocals”, and Lyria sings lyrics it writes itself, in English. Any lyrics it returns appear as the Model note. Don’t ask for a real singer’s voice. With Stems, vocals become a fifth part.'],
+    vocals: ['Vocals', 'Off: the prompt says “instrumental”. On: the primary genre picks the vocal style, e.g. “with deep guttural growled vocals” for death metal or “with rhythmic rapped vocals” for boom bap; hover a genre to see its style. Lyria writes its own lyrics, in English. Any lyrics it returns appear as the Model note. Don’t ask for a real singer’s voice. With Stems, vocals become a fifth part.'],
     stems: ['Stems', 'Makes separate generations for drums, bass, chords and pads, and melody, plus vocals when Vocals is on, all with the same tempo, key and seed. Four or five times the cost, and as separate takes they may not line up perfectly.'],
     split: ['gp-master splitter', 'Generates one mix, then separates drums, bass and “other” in your browser with gp-master, plus vocals when Vocals is on. Costs one generation and the parts line up exactly. Downloads about 60 MB of models the first time (about 125 MB with vocals).'],
     generate: ['Generate and cost', 'Sends the prompt to Lyria. The estimate shows the cost before you click, and what your balance would be afterwards. Requests run one at a time; Cancel stops the rest.'],
@@ -873,6 +876,7 @@
     else if (pos > 0) lines.push('In your mix now as a secondary genre.');
     lines.push(`As primary: “${mood} ${g.name} track…”, tempo set to ${Mix.defaultTempo(g)} BPM, featuring ${g.instruments[0]} and ${g.instruments[1]} (plus ${g.instruments[2]} when it’s the only genre).`);
     lines.push(`As secondary: “…blended with ${g.name} elements…”, adding ${g.instruments[0]}.`);
+    lines.push(`Vocals${S.vocals ? '' : ' (when ticked)'}, as primary: “…${Mix.vocalStyle(g)}…”; as secondary it doesn’t change the voice.`);
     return [`${g.name} · ${g.bpm[0]}–${g.bpm[1]} BPM · ${g.familyName}`, lines];
   }
   function tipContent(b) {

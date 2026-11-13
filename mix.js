@@ -84,9 +84,17 @@
   const rolesFor = s => s.vocals ? STEM_ROLES.concat(VOCAL_ROLE) : STEM_ROLES;
 
   /* Voice wording. Tracks are instrumental unless vocals are on; a vocal stem always has vocals and
-     an instrument stem never does. Voices are described generically, never as a real singer. */
-  const VOICE = { off: 'instrumental', on: 'with vocals' };
-  const voiceFor = (s, role) => role ? (role.id === 'vocals' ? VOICE.on : VOICE.off) : (s.vocals ? VOICE.on : VOICE.off);
+     an instrument stem never does. With vocals, the PRIMARY genre's style is used (genres.json: a
+     genre's "vocals", else its family's), e.g. "with deep guttural growled vocals". Every style
+     starts with "with", contains "vocal" and has no commas, so VOICE_RE can always find the clause.
+     Voices are described generically, never as a real singer. */
+  const VOICE = { off: 'instrumental', on: 'with vocals' };   // `on` is the fallback when no style is set
+  const VOICE_RE = /, (?:instrumental|with [^,]*vocal[^,]*),/;
+  const vocalStyle = g => (g && g.vocals) || VOICE.on;
+  const voiceFor = (s, role, primary) => (role ? role.id === 'vocals' : !!s.vocals) ? vocalStyle(primary) : VOICE.off;
+  // Replace the voice clause in a prompt (edited prompts, stem roles); leaves the prompt alone if it has none.
+  const setVoice = (prompt, clause) => VOICE_RE.test(prompt) ? prompt.replace(VOICE_RE, ', ' + clause + ',') : prompt;
+  const voiceIn = prompt => { const m = prompt.match(VOICE_RE); return m ? m[0].slice(2, -1) : null; };
 
   const energyWord = e => e < 20 ? 'low' : e < 40 ? 'medium-low' : e < 60 ? 'medium' : e < 80 ? 'medium-high' : 'high';
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -98,7 +106,7 @@
     for (const f of catalogue.families) {
       near[f.id] = f.near || [];
       for (const g of f.genres) {
-        const x = Object.assign({ family: f.id, familyName: f.name }, g);
+        const x = Object.assign({ family: f.id, familyName: f.name }, g, { vocals: g.vocals || f.vocals || '' });
         byId[g.id] = x; list.push(x);
       }
     }
@@ -193,7 +201,8 @@
 
   /* The prompt template:
      "{mood} {primary} track blended with {secondary} elements, {tempo} BPM, {energy} energy,
-      {key feel}, featuring {instruments}, {arrangement}, instrumental, {length}, clean stereo mix."
+      {key feel}, featuring {instruments}, {arrangement}, {voice}, {length}, clean stereo mix."
+     {voice} is "instrumental", or the primary genre's vocal style when s.vocals is on.
      {length} is s.lengthText ("30 seconds" for clips, a full-song phrase for songs).
      Empty parts are dropped. `role` (a STEM_ROLES entry) swaps the instrument clause. */
   function composePrompt(idx, s, role) {
@@ -207,17 +216,18 @@
       keyClause(s.key, s.root, s.mode),
       role ? role.text : 'featuring ' + joinList(instrumentsFor(gs)),
       ARRANGEMENTS[s.arrangement] || '',
-      voiceFor(s, role), s.lengthText || '30 seconds', 'clean stereo mix'];
+      voiceFor(s, role, gs[0]), s.lengthText || '30 seconds', 'clean stereo mix'];
     return parts.filter(Boolean).join(', ') + '.';
   }
 
-  // Role prompt derived from an edited main prompt: replace the "featuring ..." clause if present.
-  function rolePromptFrom(prompt, role) {
+  /* Role prompt derived from an edited main prompt: replace the "featuring ..." clause if present.
+     `style` is the primary genre's vocal style, used by the vocal stem if the prompt has none. */
+  function rolePromptFrom(prompt, role, style) {
     // The instrument list itself contains commas, so cut up to the next clause the template adds after it.
-    const re = /featuring .*?(?=, (?:with a gradual|building to|stripped-down|loop-friendly|instrumental|with vocals)\b|\.\s*$)/i;
-    // Instrument stems drop the vocals; the vocal stem asks for them.
-    const want = role.id === 'vocals' ? VOICE.on : VOICE.off, other = role.id === 'vocals' ? VOICE.off : VOICE.on;
-    prompt = prompt.replace(', ' + other + ',', ', ' + want + ',');
+    const re = /featuring .*?(?=, (?:with a gradual|building to|stripped-down|loop-friendly|instrumental|with [^,]*vocal)|\.\s*$)/i;
+    // Instrument stems drop the vocals; the vocal stem keeps a vocal clause you typed, else the genre's style.
+    const cur = voiceIn(prompt);
+    prompt = setVoice(prompt, role.id !== 'vocals' ? VOICE.off : (cur && cur !== VOICE.off ? cur : style || VOICE.on));
     if (re.test(prompt)) return prompt.replace(re, role.text);
     return prompt.replace(/\.\s*$/, '') + ', ' + role.text + '.';
   }
@@ -227,7 +237,7 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max || 48).replace(/-+$/, '') || 'mix';
   }
 
-  const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, VOCAL_ROLE, VOICE, rolesFor, energyWord, index, bpmGap, pairClash, mixClash,
+  const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, VOCAL_ROLE, VOICE, rolesFor, vocalStyle, setVoice, voiceIn, energyWord, index, bpmGap, pairClash, mixClash,
     clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, slug };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Mix = api;

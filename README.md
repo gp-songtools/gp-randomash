@@ -51,7 +51,11 @@ node tools/dry-run.js 5
 - **Tempo** is a BPM slider. It resets to the middle of the primary genre's typical range, which is shown underneath, when the primary changes.
 - **Energy** runs from low to high.
 - **Mood** has 16 options.
-- **Key feel** is major, minor, modal or ambiguous.
+- **Key** has two parts:
+  - The feel: major, minor, modal or ambiguous.
+  - A key menu: **Any key (Lyria chooses)**, or one of the 12 keys.
+  - A chosen key is spelled as musicians would for that scale and written out in words, e.g. "in D-flat major", "in C-sharp minor", "with modal harmony centered on D".
+  - In stems mode every part gets the same key.
 - **Arrangement** is none, build-up, drop, stripped-down or loop-friendly.
 - **Seed** is a number with a 🎲 button. The seed sets the model's dice roll, not the style; the style comes from the prompt. Tick **New random seed for each generation** for a different track each time from the same recipe. Untick it, or type a seed, to lock it: the same prompt and seed should give the same track again, so you can change one setting and hear just that change. How exactly Lyria honors a seed isn't documented.
 

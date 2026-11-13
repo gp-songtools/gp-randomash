@@ -14,6 +14,34 @@
     ambiguous: 'with harmonically ambiguous chords'
   };
 
+  /* Key roots. `ui` is the menu label; `major` / `minor` are the conventional spellings for that
+     scale, written out in words for the English-only prompt. Modal and ambiguous use `major`. */
+  const KEY_ROOTS = [
+    { id: 'C',  ui: 'C',     major: 'C',       minor: 'C' },
+    { id: 'Db', ui: 'C♯/D♭', major: 'D-flat',  minor: 'C-sharp' },
+    { id: 'D',  ui: 'D',     major: 'D',       minor: 'D' },
+    { id: 'Eb', ui: 'D♯/E♭', major: 'E-flat',  minor: 'E-flat' },
+    { id: 'E',  ui: 'E',     major: 'E',       minor: 'E' },
+    { id: 'F',  ui: 'F',     major: 'F',       minor: 'F' },
+    { id: 'Gb', ui: 'F♯/G♭', major: 'F-sharp', minor: 'F-sharp' },
+    { id: 'G',  ui: 'G',     major: 'G',       minor: 'G' },
+    { id: 'Ab', ui: 'G♯/A♭', major: 'A-flat',  minor: 'G-sharp' },
+    { id: 'A',  ui: 'A',     major: 'A',       minor: 'A' },
+    { id: 'Bb', ui: 'A♯/B♭', major: 'B-flat',  minor: 'B-flat' },
+    { id: 'B',  ui: 'B',     major: 'B',       minor: 'B' }
+  ];
+  const rootById = id => KEY_ROOTS.find(r => r.id === id);
+
+  // Key clause: feel alone when no root is chosen (Lyria picks the key), otherwise feel + root.
+  function keyClause(key, root) {
+    const r = rootById(root);
+    if (!r) return KEY_FEELS[key] || KEY_FEELS.minor;
+    if (key === 'major') return 'in ' + r.major + ' major';
+    if (key === 'modal') return 'with modal harmony centered on ' + r.major;
+    if (key === 'ambiguous') return 'with harmonically ambiguous chords centered on ' + r.major;
+    return 'in ' + r.minor + ' minor';
+  }
+
   const ARRANGEMENTS = {
     none: '',
     buildup: 'with a gradual build-up',
@@ -146,7 +174,7 @@
     const parts = [head,
       Math.round(s.tempo) + ' BPM',
       energyWord(s.energy) + ' energy',
-      KEY_FEELS[s.key] || KEY_FEELS.minor,
+      keyClause(s.key, s.root),
       role ? role.text : 'featuring ' + joinList(instrumentsFor(gs)),
       ARRANGEMENTS[s.arrangement] || '',
       'instrumental', s.lengthText || '30 seconds', 'clean stereo mix'];
@@ -166,7 +194,7 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max || 48).replace(/-+$/, '') || 'mix';
   }
 
-  const api = { MOODS, KEY_FEELS, ARRANGEMENTS, STEM_ROLES, energyWord, index, bpmGap, pairClash, mixClash,
+  const api = { MOODS, KEY_FEELS, KEY_ROOTS, keyClause, ARRANGEMENTS, STEM_ROLES, energyWord, index, bpmGap, pairClash, mixClash,
     clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, slug };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Mix = api;

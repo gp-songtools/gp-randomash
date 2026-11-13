@@ -11,7 +11,7 @@
   // ---------- state ----------
   let IDX = null;
   const S = {
-    genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', arrangement: 'none',
+    genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', root: '', arrangement: 'none',
     seed: randSeed(), seedRandom: true, stems: false, split: false, dry: true, length: Lyria.LYRIA.DEFAULT_LENGTH,
     promptEdited: false, prompt: ''
   };
@@ -46,6 +46,7 @@
       for (const k of ['tempo', 'energy', 'seed']) if (Number.isFinite(u[k])) S[k] = u[k];
       if (Mix.MOODS.includes(u.mood)) S.mood = u.mood;
       if (Mix.KEY_FEELS[u.key]) S.key = u.key;
+      if (Mix.KEY_ROOTS.some(r => r.id === u.root)) S.root = u.root;
       if (u.arrangement in Mix.ARRANGEMENTS) S.arrangement = u.arrangement;
       if (Lyria.LYRIA.LENGTHS[u.length]) S.length = u.length;
       for (const k of ['seedRandom', 'stems', 'split', 'dry', 'promptEdited']) if (typeof u[k] === 'boolean') S[k] = u[k];
@@ -99,6 +100,7 @@
     $('mood').innerHTML = Mix.MOODS.map(m => `<option value="${m}">${m[0].toUpperCase() + m.slice(1)}</option>`).join('');
     const kf = { major: 'Major', minor: 'Minor', modal: 'Modal', ambiguous: 'Ambiguous' };
     $('keyFeel').innerHTML = Object.keys(kf).map(k => `<label><input type="radio" name="keyFeel" value="${k}"><span>${kf[k]}</span></label>`).join('');
+    $('root').innerHTML = '<option value="">Any key (Lyria chooses)</option>' + Mix.KEY_ROOTS.map(r => `<option value="${r.id}">${r.ui}</option>`).join('');
     $('lengthSeg').innerHTML = Object.entries(Lyria.LYRIA.LENGTHS).map(([k, L]) =>
       `<label><input type="radio" name="length" value="${k}"><span>${esc(L.label)} · ${esc(L.detail)} · $${L.costUsd.toFixed(2)}</span></label>`).join('');
     const ar = { none: 'None', buildup: 'Build-up', drop: 'Drop', stripped: 'Stripped-down', loop: 'Loop-friendly' };
@@ -114,7 +116,7 @@
   }
 
   function applyStateToControls() {
-    $('tempo').value = S.tempo; $('energy').value = S.energy; $('mood').value = S.mood; $('arr').value = S.arrangement;
+    $('tempo').value = S.tempo; $('energy').value = S.energy; $('mood').value = S.mood; $('arr').value = S.arrangement; $('root').value = S.root;
     const r = document.querySelector(`#keyFeel input[value="${S.key}"]`); if (r) r.checked = true;
     const l = document.querySelector(`#lengthSeg input[value="${S.length}"]`); if (l) l.checked = true;
     $('seed').value = S.seed; $('seedRandom').checked = S.seedRandom;
@@ -270,6 +272,7 @@
     $('energy').oninput = e => { S.energy = +e.target.value; renderAll(); };
     $('mood').onchange = e => { S.mood = e.target.value; renderAll(); };
     $('keyFeel').onchange = e => { S.key = e.target.value; renderAll(); };
+    $('root').onchange = e => { S.root = e.target.value; renderAll(); };
     $('arr').onchange = e => { S.arrangement = e.target.value; renderAll(); };
     $('lengthSeg').onchange = e => {
       const from = LEN().promptLength;
@@ -390,7 +393,7 @@
     const run = {
       id, timestamp: now.toISOString(),
       genres: S.genres.slice(), genreNames: S.genres.map(g => IDX.byId[g].name),
-      sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, arrangement: S.arrangement },
+      sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, root: S.root, arrangement: S.arrangement },
       prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.modelFor(length), length, mode,
       files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), spentUsd: 0, rating: 0, starred: false, notes: ''
     };
@@ -724,7 +727,7 @@
           <button type="button" class="star${r.starred ? ' on' : ''}" data-act="star" aria-pressed="${!!r.starred}" aria-label="Star">${r.starred ? '★' : '☆'}</button>
           <button type="button" class="main" data-act="restore" title="Restore these genres and settings">
             <span class="gn">${esc((r.genreNames || r.genres || []).join(' + '))}</span>
-            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
+            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM${(() => { const k = Mix.KEY_ROOTS.find(x => x.id === sl.root); return k ? ' · ' + esc(k.ui) + ' ' + esc(sl.key || '') : ''; })()} · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
           </button>
         </div>
         <div class="row" style="margin-top:4px">
@@ -778,6 +781,7 @@
     if (Number.isFinite(sl.energy)) S.energy = sl.energy;
     if (Mix.MOODS.includes(sl.mood)) S.mood = sl.mood;
     if (Mix.KEY_FEELS[sl.key]) S.key = sl.key;
+    S.root = Mix.KEY_ROOTS.some(x => x.id === sl.root) ? sl.root : '';   // older runs had no root: Lyria chose
     if (sl.arrangement in Mix.ARRANGEMENTS) S.arrangement = sl.arrangement;
     S.seed = r.seed | 0; S.seedRandom = false;
     S.stems = r.mode === 'stems' || r.mode === 'mix+split'; S.split = r.mode === 'mix+split';

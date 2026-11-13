@@ -25,7 +25,8 @@
       {"id": "neo-soul", "name": "neo-soul", "bpm": [70,95], "energy": 0.4, "acoustic": 0.55, "clash": 0.3, "instruments": ["extended jazz chords on Rhodes", "behind-the-beat drums", "melodic bass guitar", "soft guitar licks"]},
       {"id": "rnb", "name": "contemporary R&B", "bpm": [65,100], "energy": 0.45, "acoustic": 0.3, "clash": 0.3, "instruments": ["silky synth pads", "finger snaps", "deep 808", "plucked guitar"]},
       {"id": "funk", "name": "funk", "bpm": [95,120], "energy": 0.75, "acoustic": 0.6, "clash": 0.45, "instruments": ["slap bass", "choppy rhythm guitar", "tight horn section", "syncopated drums"]},
-      {"id": "gospel", "name": "gospel", "bpm": [70,130], "energy": 0.65, "acoustic": 0.7, "clash": 0.5, "instruments": ["Hammond organ", "gospel piano", "handclaps", "driving bass"]}
+      {"id": "gospel", "name": "gospel", "bpm": [70,130], "energy": 0.65, "acoustic": 0.7, "clash": 0.5, "instruments": ["Hammond organ", "gospel piano", "handclaps", "driving bass"]},
+      {"id": "horrorcore", "name": "horrorcore", "bpm": [75, 100], "energy": 0.7, "acoustic": 0.1, "clash": 0.75, "instruments": ["eerie horror-film synths", "heavy 808 bass", "detuned music-box melody", "ominous choir pads"]}
     ]},
     { "id": "rock-metal", "name": "Rock and metal", "near": ["folk-country", "pop-dance"], "genres": [
       {"id": "shoegaze", "name": "shoegaze", "bpm": [90,130], "energy": 0.55, "acoustic": 0.5, "clash": 0.4, "instruments": ["walls of fuzzed guitars", "shimmering reverb", "buried melodies", "steady drums"]},
@@ -39,7 +40,9 @@
       {"id": "post-rock", "name": "post-rock", "bpm": [70,130], "energy": 0.55, "acoustic": 0.6, "clash": 0.3, "instruments": ["delay-drenched guitars", "swelling crescendos", "tom-heavy drums", "glockenspiel"]},
       {"id": "garage-rock", "name": "garage rock", "bpm": [120,160], "energy": 0.8, "acoustic": 0.65, "clash": 0.5, "instruments": ["fuzzy guitar riffs", "Farfisa-style organ", "trashy drums", "raw bass"]},
       {"id": "psych-rock", "name": "psychedelic rock", "bpm": [80,130], "energy": 0.6, "acoustic": 0.6, "clash": 0.4, "instruments": ["wah guitar", "phased drums", "sitar-like drones", "swirling organ"]},
-      {"id": "math-rock", "name": "math rock", "bpm": [110,160], "energy": 0.7, "acoustic": 0.65, "clash": 0.6, "instruments": ["tapped clean guitar lines", "odd-meter drums", "melodic bass", "intricate rhythm changes"]}
+      {"id": "math-rock", "name": "math rock", "bpm": [110,160], "energy": 0.7, "acoustic": 0.65, "clash": 0.6, "instruments": ["tapped clean guitar lines", "odd-meter drums", "melodic bass", "intricate rhythm changes"]},
+      {"id": "metalcore", "name": "metalcore", "bpm": [120, 180], "energy": 0.95, "acoustic": 0.55, "clash": 0.8, "instruments": ["chugging breakdown riffs", "melodic harmonized lead guitars", "double kick drums", "drop-tuned bass"]},
+      {"id": "death-metal", "name": "death metal", "bpm": [120, 220], "energy": 1.0, "acoustic": 0.55, "clash": 0.9, "instruments": ["low-tuned tremolo-picked riffs", "blast-beat drums", "growling distorted bass", "chromatic guitar leads"]}
     ]},
     { "id": "jazz-blues", "name": "Jazz and blues", "near": ["hiphop-rnb", "folk-country", "world-fusion"], "genres": [
       {"id": "bebop", "name": "bebop", "bpm": [180,280], "energy": 0.8, "acoustic": 0.95, "clash": 0.65, "instruments": ["fast alto saxophone lines", "walking upright bass", "ride-cymbal swing drums", "comping piano"]},
@@ -51,7 +54,8 @@
       {"id": "soul-jazz", "name": "soul jazz", "bpm": [95,125], "energy": 0.6, "acoustic": 0.85, "clash": 0.35, "instruments": ["Hammond B3 organ", "groovy guitar", "tenor sax", "backbeat drums"]},
       {"id": "swing", "name": "swing", "bpm": [130,200], "energy": 0.75, "acoustic": 0.95, "clash": 0.55, "instruments": ["big band horns", "walking bass", "swung drums", "clarinet"]},
       {"id": "delta-blues", "name": "delta blues", "bpm": [70,110], "energy": 0.4, "acoustic": 1, "clash": 0.5, "instruments": ["slide acoustic guitar", "foot stomps", "harmonica", "resonator guitar"]},
-      {"id": "chicago-blues", "name": "Chicago blues", "bpm": [80,130], "energy": 0.6, "acoustic": 0.75, "clash": 0.45, "instruments": ["overdriven electric guitar", "amplified harmonica", "shuffle drums", "boogie piano"]}
+      {"id": "chicago-blues", "name": "Chicago blues", "bpm": [80,130], "energy": 0.6, "acoustic": 0.75, "clash": 0.45, "instruments": ["overdriven electric guitar", "amplified harmonica", "shuffle drums", "boogie piano"]},
+      {"id": "swamp-blues", "name": "swamp blues", "bpm": [70, 105], "energy": 0.45, "acoustic": 0.8, "clash": 0.5, "instruments": ["tremolo-soaked electric guitar", "wailing harmonica", "laid-back shuffle drums", "slapback-echo bass"]}
     ]},
     { "id": "folk-country", "name": "Folk and country", "near": ["rock-metal", "jazz-blues", "world-fusion"], "genres": [
       {"id": "bluegrass", "name": "bluegrass", "bpm": [110,180], "energy": 0.75, "acoustic": 1, "clash": 0.6, "instruments": ["rolling banjo", "fiddle", "mandolin chop", "upright bass"]},
@@ -130,7 +134,9 @@
       {"id": "italo-disco", "name": "Italo disco", "bpm": [115,128], "energy": 0.7, "acoustic": 0.05, "clash": 0.4, "instruments": ["octave-sequenced synth bass", "arpeggiated leads", "Simmons-style toms", "string machine"]},
       {"id": "electropop", "name": "electropop", "bpm": [110,128], "energy": 0.7, "acoustic": 0.05, "clash": 0.35, "instruments": ["crunchy synth bass", "clap-heavy beat", "sparkly arpeggios", "filtered chords"]},
       {"id": "dream-pop", "name": "dream pop", "bpm": [80,115], "energy": 0.35, "acoustic": 0.5, "clash": 0.2, "instruments": ["chorus-soaked guitar", "hazy synth pads", "soft drum machine", "reverb bells"]},
-      {"id": "bedroom-pop", "name": "bedroom pop", "bpm": [80,115], "energy": 0.35, "acoustic": 0.5, "clash": 0.2, "instruments": ["lo-fi guitar", "cheap drum machine", "warbly synth", "warm bass"]}
+      {"id": "bedroom-pop", "name": "bedroom pop", "bpm": [80,115], "energy": 0.35, "acoustic": 0.5, "clash": 0.2, "instruments": ["lo-fi guitar", "cheap drum machine", "warbly synth", "warm bass"]},
+      {"id": "doo-wop", "name": "doo-wop", "bpm": [60, 110], "energy": 0.4, "acoustic": 0.85, "clash": 0.45, "instruments": ["12/8 piano triplets", "tenor saxophone", "upright bass", "I–vi–IV–V chord changes"]},
+      {"id": "edm", "name": "EDM", "bpm": [124, 130], "energy": 0.9, "acoustic": 0.0, "clash": 0.45, "instruments": ["festival kick drum", "massive supersaw chords", "snare-roll build-ups", "sidechained synth bass"]}
     ]},
     { "id": "world-fusion", "name": "World fusion", "near": ["latin-caribbean", "african", "middle-east-balkan", "jazz-blues"], "genres": [
       {"id": "flamenco", "name": "flamenco", "bpm": [90,200], "energy": 0.75, "acoustic": 1, "clash": 0.7, "instruments": ["flamenco guitar rasgueado", "palmas handclaps", "cajon", "footwork percussion"]},
@@ -152,7 +158,8 @@
       {"id": "new-age", "name": "new age", "bpm": [50,90], "energy": 0.15, "acoustic": 0.6, "clash": 0.25, "instruments": ["shimmering synth pads", "pan flute", "harp", "nature-like textures"]},
       {"id": "musique-concrete", "name": "musique concrète", "bpm": [50,120], "energy": 0.4, "acoustic": 0.5, "clash": 0.75, "instruments": ["manipulated found sounds", "tape loops", "reversed textures", "abrupt splices"]},
       {"id": "noise", "name": "noise", "bpm": [60,160], "energy": 0.9, "acoustic": 0.3, "clash": 0.95, "instruments": ["harsh feedback", "distorted static", "pedal-chain squalls", "metallic clatter"]},
-      {"id": "field-collage", "name": "field-recording collage", "bpm": [50,100], "energy": 0.2, "acoustic": 0.7, "clash": 0.4, "instruments": ["environmental recordings", "processed field sounds", "sparse piano", "soft synth drones"]}
+      {"id": "field-collage", "name": "field-recording collage", "bpm": [50,100], "energy": 0.2, "acoustic": 0.7, "clash": 0.4, "instruments": ["environmental recordings", "processed field sounds", "sparse piano", "soft synth drones"]},
+      {"id": "illbient", "name": "illbient", "bpm": [70, 95], "energy": 0.3, "acoustic": 0.2, "clash": 0.5, "instruments": ["dusty slowed breakbeats", "dub-style echoes", "dark ambient drones", "turntable scratches"]}
     ]}
   ]
 }

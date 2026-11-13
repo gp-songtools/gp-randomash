@@ -818,7 +818,7 @@
     folder: ['Output folder', 'Chrome or Edge only. Pick a folder and every run is written to output/<timestamp>_<genres>/, with history.json kept up to date beside it. Without one, clips stay in this browser with download links.'],
     mix: ['Current mix', 'The genres you picked, in order. The first is the primary style and leads the prompt; the rest are blended in as secondary elements. ↑ makes one primary, × removes it. The clash badge shows how far apart they are.'],
     surprise: ['Surprise me', 'Picks 2–3 random genres, weighted toward a clash score of 0.4–0.7: different enough to be interesting, close enough not to be noise. Your other settings stay as they are.'],
-    genres: ['Genres', '127 genres in 13 families. Click a chip to add or remove it; the number on a chip is its place in the mix. Type in search to filter; Enter adds the first match, Esc clears. Collapse all folds the families.'],
+    genres: ['Genres', '{n} genres in {f} families. Click a chip to add or remove it; the number on a chip is its place in the mix. Type in search to filter; Enter adds the first match, Esc clears. Collapse all folds the families.'],
     tempo: ['Tempo', 'Beats per minute. It jumps to the middle of the primary genre’s typical range when the primary changes; the hint shows that range. Trim also uses it to snap to bars and beats.'],
     energy: ['Energy', 'How intense the track is, from low (calm, sparse) to high (driving, dense). It becomes “low energy”, “medium energy” and so on in the prompt.'],
     mood: ['Mood', 'The emotional color of the track. It’s the first word of the prompt, e.g. “Dreamy house track…”.'],
@@ -849,7 +849,8 @@
   }
   function showTip(b) {
     const t = INFO[b.dataset.info]; if (!t) return;
-    tip.innerHTML = `<b>${esc(t[0])}</b>${esc(t[1])}`;
+    const body = t[1].replace('{n}', IDX ? IDX.list.length : 'All').replace('{f}', IDX ? IDX.families.length : 'their');
+    tip.innerHTML = `<b>${esc(t[0])}</b>${esc(body)}`;
     if (tip.hidden || tipFor !== b) tipShownAt = Date.now();
     tip.hidden = false; tipFor = b; b.setAttribute('aria-describedby', 'tip');
     const r = b.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 8;

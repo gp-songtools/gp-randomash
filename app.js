@@ -12,7 +12,7 @@
   let IDX = null;
   const S = {
     genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', root: '', mode: '', arrangement: 'none',
-    seed: randSeed(), seedRandom: true, stems: false, split: false, dry: true, length: Lyria.LYRIA.DEFAULT_LENGTH,
+    seed: randSeed(), seedRandom: true, vocals: false, stems: false, split: false, dry: true, length: Lyria.LYRIA.DEFAULT_LENGTH,
     promptEdited: false, prompt: ''
   };
   let tempoTouched = false, busy = false, abortCtl = null, currentRunId = null, apiKey = '';
@@ -50,7 +50,7 @@
       if (Mix.MODES.some(m => m.id === u.mode)) S.mode = u.mode;
       if (u.arrangement in Mix.ARRANGEMENTS) S.arrangement = u.arrangement;
       if (Lyria.LYRIA.LENGTHS[u.length]) S.length = u.length;
-      for (const k of ['seedRandom', 'stems', 'split', 'dry', 'promptEdited']) if (typeof u[k] === 'boolean') S[k] = u[k];
+      for (const k of ['seedRandom', 'vocals', 'stems', 'split', 'dry', 'promptEdited']) if (typeof u[k] === 'boolean') S[k] = u[k];
       if (typeof u.prompt === 'string') S.prompt = u.prompt;
       tempoTouched = !!u.tempoTouched;
     } catch (_) {}
@@ -124,7 +124,7 @@
     const r = document.querySelector(`#keyFeel input[value="${S.key}"]`); if (r) r.checked = true;
     const l = document.querySelector(`#lengthSeg input[value="${S.length}"]`); if (l) l.checked = true;
     $('seed').value = S.seed; $('seedRandom').checked = S.seedRandom;
-    $('stems').checked = S.stems; $('split').checked = S.split; $('dry').checked = S.dry;
+    $('vocals').checked = S.vocals; $('stems').checked = S.stems; $('split').checked = S.split; $('dry').checked = S.dry;
     if (S.promptEdited) $('prompt').value = S.prompt;
   }
 
@@ -210,7 +210,7 @@
 
   function plannedCalls() {
     if (!S.stems || S.split) return 1;
-    return Mix.STEM_ROLES.length;
+    return Mix.rolesFor(S).length;
   }
   function renderCost() {
     const n = plannedCalls(), usd = n * unitCost(), what = S.length === 'full' ? 'song' : 'clip';
@@ -291,6 +291,13 @@
     $('seed').onchange = e => { const v = Math.max(0, Math.min(2147483647, Math.floor(+e.target.value || 0))); S.seed = v; e.target.value = v; S.seedRandom = false; $('seedRandom').checked = false; saveUI(); };
     $('seedRoll').onclick = () => { S.seed = randSeed(); $('seed').value = S.seed; saveUI(); };
     $('seedRandom').onchange = e => { S.seedRandom = e.target.checked; saveUI(); };
+    $('vocals').onchange = e => {
+      S.vocals = e.target.checked;
+      // Keep an edited prompt in step, as with Length.
+      const [from, to] = S.vocals ? [Mix.VOICE.off, Mix.VOICE.on] : [Mix.VOICE.on, Mix.VOICE.off];
+      if (S.promptEdited && S.prompt.includes(', ' + from + ',')) { S.prompt = S.prompt.replace(', ' + from + ',', ', ' + to + ','); $('prompt').value = S.prompt; }
+      renderAll();
+    };
     $('stems').onchange = e => { S.stems = e.target.checked; renderAll(); };
     $('split').onchange = e => { S.split = e.target.checked; renderAll(); if (S.split) pingSplitter(); };
     $('dry').onchange = e => { S.dry = e.target.checked; renderAll(); };
@@ -369,7 +376,7 @@
 
   function buildCalls(prompt) {
     if (!S.stems || S.split) return [{ role: 'mix', label: 'Full mix', prompt }];
-    return Mix.STEM_ROLES.map(r => ({
+    return Mix.rolesFor(S).map(r => ({
       role: r.id, label: r.label,
       prompt: S.promptEdited ? Mix.rolePromptFrom(prompt, r) : Mix.composePrompt(IDX, ps(), r)
     }));
@@ -406,7 +413,7 @@
       id, timestamp: now.toISOString(),
       genres: S.genres.slice(), genreNames: S.genres.map(g => IDX.byId[g].name),
       sliders: { tempo: S.tempo, energy: S.energy, mood: S.mood, key: S.key, root: S.root, mode: S.key === 'modal' ? S.mode : '', arrangement: S.arrangement },
-      prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.modelFor(length), length, mode,
+      prompt, promptEdited: S.promptEdited, seed: S.seed, seedSent: true, model: Lyria.modelFor(length), length, vocals: S.vocals, mode,
       files: [], refusals: [], modelText: '', estCostUsd: +cost.toFixed(2), spentUsd: 0, rating: 0, starred: false, notes: ''
     };
     currentRunId = id;
@@ -443,7 +450,10 @@
         out.card.hidden = true;
         setStatus(run.refusals.length ? 'Nothing generated.' : '', run.refusals.length ? 'err' : '');
       }
-      if (run.modelText) out.meta.insertAdjacentHTML('beforeend', `<p class="modeltext">Model note: ${esc(run.modelText.slice(0, 600))}</p>`);
+      // With vocals this is often the lyrics: keep line breaks, fold it when long.
+      if (run.modelText) out.meta.insertAdjacentHTML('beforeend', run.modelText.length > 300 || run.modelText.split('\n').length > 4
+        ? `<details class="modeltext"><summary>${run.vocals ? 'Lyrics and model note' : 'Model note'}</summary><div>${esc(run.modelText)}</div></details>`
+        : `<p class="modeltext">Model note: ${esc(run.modelText)}</p>`);
     } catch (e) {
       setStatus(e.message || String(e), 'err');
       if (run.files.length) { await Store.putRun(run); }
@@ -535,9 +545,11 @@
     let buf;
     try { buf = await ctx.decodeAudioData(await blob.arrayBuffer()); } finally { ctx.close(); }
     const L = buf.getChannelData(0).slice(), R = (buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0)).slice();
-    const r = await splitCall({ type: 'split', mix: [L, R], sampleRate: SR, stems: ['drums', 'bass', 'other'] }, [L.buffer, R.buffer], t => setStatus('gp-master: ' + t, 'busy'));
-    const labels = { drums: 'Drums (gp-master split)', bass: 'Bass (gp-master split)', other: 'Other: chords and melody (gp-master split)' };
-    for (const k of ['drums', 'bass', 'other']) {
+    // With vocals on, gp-master's vocal model runs too (about 67 MB more to download the first time).
+    const want = run.vocals ? ['vocals', 'drums', 'bass', 'other'] : ['drums', 'bass', 'other'];
+    const r = await splitCall({ type: 'split', mix: [L, R], sampleRate: SR, stems: want }, [L.buffer, R.buffer], t => setStatus('gp-master: ' + t, 'busy'));
+    const labels = { vocals: 'Vocals (gp-master split)', drums: 'Drums (gp-master split)', bass: 'Bass (gp-master split)', other: 'Other: chords and melody (gp-master split)' };
+    for (const k of want) {
       if (!r.result[k]) continue;
       const wav = encodeWav(r.result[k], r.sampleRate || SR);
       await addFile(run, { role: 'split-' + k, label: labels[k], prompt: '' }, wav, 'audio/wav', out);
@@ -739,7 +751,7 @@
           <button type="button" class="star${r.starred ? ' on' : ''}" data-act="star" aria-pressed="${!!r.starred}" aria-label="Star">${r.starred ? '★' : '☆'}</button>
           <button type="button" class="main" data-act="restore" title="Restore these genres and settings">
             <span class="gn">${esc((r.genreNames || r.genres || []).join(' + '))}</span>
-            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM${(() => { const k = Mix.keyLabel(sl.key, sl.root, sl.mode); return k ? ' · ' + esc(k) : ''; })()} · ${r.length === 'full' ? 'song' : 'clip'} · ${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
+            <span class="meta">${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(sl.mood || '')} · ${sl.tempo || '?'} BPM${(() => { const k = Mix.keyLabel(sl.key, sl.root, sl.mode); return k ? ' · ' + esc(k) : ''; })()} · ${r.length === 'full' ? 'song' : 'clip'}${r.vocals ? ' · vocals' : ''} ·${esc(r.mode || 'mix')} · seed ${r.seed}${r.seedSent === false ? ' (not sent)' : ''}</span>
           </button>
         </div>
         <div class="row" style="margin-top:4px">
@@ -799,6 +811,7 @@
     S.seed = r.seed | 0; S.seedRandom = false;
     S.stems = r.mode === 'stems' || r.mode === 'mix+split'; S.split = r.mode === 'mix+split';
     S.length = Lyria.LYRIA.LENGTHS[r.length] ? r.length : 'clip';   // runs from before the option were clips
+    S.vocals = r.vocals === true;                                    // older runs were all instrumental
     S.promptEdited = !!r.promptEdited && r.prompt !== Mix.composePrompt(IDX, ps());
     if (S.promptEdited) S.prompt = r.prompt;
     tempoTouched = true; currentRunId = r.id;
@@ -831,8 +844,9 @@
     seedRandom: ['New random seed', 'On: every Generate rolls a new seed, so you get a different track from the same recipe. Off: the seed is locked. Restoring a run from history locks its seed.'],
     prompt: ['Lyria prompt', 'The text sent to Lyria, rebuilt live from your choices. You can edit it directly; live updates then pause until you press Reset. English only, and don’t name real artists.'],
     length: ['Length', 'Clip: always 30 seconds, about $0.04. Full song: about 2–3 minutes, about $0.08. You pay per generation, not per second, so trimming afterwards doesn’t lower the cost.'],
-    stems: ['Stems', 'Makes four separate generations (drums, bass, chords and pads, melody) with the same tempo, key and seed. Four times the cost, and as separate takes they may not line up perfectly.'],
-    split: ['gp-master splitter', 'Generates one mix, then separates drums, bass and “other” in your browser with gp-master. Costs one generation and the parts line up exactly. Downloads about 60 MB of models the first time.'],
+    vocals: ['Vocals', 'Off: the prompt says “instrumental”. On: it says “with vocals”, and Lyria sings lyrics it writes itself, in English. Any lyrics it returns appear as the Model note. Don’t ask for a real singer’s voice. With Stems, vocals become a fifth part.'],
+    stems: ['Stems', 'Makes separate generations for drums, bass, chords and pads, and melody, plus vocals when Vocals is on, all with the same tempo, key and seed. Four or five times the cost, and as separate takes they may not line up perfectly.'],
+    split: ['gp-master splitter', 'Generates one mix, then separates drums, bass and “other” in your browser with gp-master, plus vocals when Vocals is on. Costs one generation and the parts line up exactly. Downloads about 60 MB of models the first time (about 125 MB with vocals).'],
     generate: ['Generate and cost', 'Sends the prompt to Lyria. The estimate shows the cost before you click, and what your balance would be afterwards. Requests run one at a time; Cancel stops the rest.'],
     history: ['History', 'Every run you generate, newest first. Click one to restore its genres, settings, key and seed. ☆ stars a run, the 1–5 stars rate it, and the notes box is for your comments.'],
     starOnly: ['★ only', 'Show only runs you’ve starred.'],

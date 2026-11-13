@@ -19,6 +19,7 @@
   - Real Lyria calls cost money: never make one without the owner's go-ahead; Dry run stays on by default
   - API key lives only in the browser (memory, or `randomash.key.v1` when Remember is ticked); send it only in the `x-goog-api-key` header, never in a URL, log, error text or commit
   - Prompts: US English, never name real artists or imitate voices
+  - Vocals are off by default ("instrumental"); with Vocals on the prompt says "with vocals" (`VOICE` in mix.js), stems add a vocals-only part and gp-master also splits vocals; instrument stems always stay instrumental
   - localStorage keys: `randomash.ui.v1`, `randomash.key.v1`, `randomash.balance.v1`; don't change a key's format without migrating it
   - Balance is an estimate (amount entered minus the chosen length's `costUsd` per returned clip); kept apart from history so deleting runs never refunds
   - Trim runs entirely in the browser (Web Audio decode, WAV export); it must never call the API

@@ -153,6 +153,8 @@ details.fam summary .sel{font-size:.75rem;background:var(--chipOn);color:var(--c
 .trim .len{font-variant-numeric:tabular-nums;font-weight:600}
 .trim .hint{margin:0}
 .reqbox{background:var(--soft);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}
+details.modeltext div{white-space:pre-wrap;margin-top:6px}
+details.modeltext summary{cursor:pointer;font-style:normal;font-weight:600}
 .modeltext{color:var(--mut);font-size:.88rem;font-style:italic;margin:6px 0 0}
 
 /* history */

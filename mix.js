@@ -79,6 +79,14 @@
     { id: 'chords', label: 'Chords and pads', text: 'chords and pads only, no drums, no bass, no lead melody' },
     { id: 'melody', label: 'Melody', text: 'lead melody only, no drums, no bass, no chords' }
   ];
+  // Added as a fifth stem only when vocals are on. The instrument stems stay instrumental.
+  const VOCAL_ROLE = { id: 'vocals', label: 'Vocals', text: 'lead vocals only, a cappella, no instruments' };
+  const rolesFor = s => s.vocals ? STEM_ROLES.concat(VOCAL_ROLE) : STEM_ROLES;
+
+  /* Voice wording. Tracks are instrumental unless vocals are on; a vocal stem always has vocals and
+     an instrument stem never does. Voices are described generically, never as a real singer. */
+  const VOICE = { off: 'instrumental', on: 'with vocals' };
+  const voiceFor = (s, role) => role ? (role.id === 'vocals' ? VOICE.on : VOICE.off) : (s.vocals ? VOICE.on : VOICE.off);
 
   const energyWord = e => e < 20 ? 'low' : e < 40 ? 'medium-low' : e < 60 ? 'medium' : e < 80 ? 'medium-high' : 'high';
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -199,14 +207,17 @@
       keyClause(s.key, s.root, s.mode),
       role ? role.text : 'featuring ' + joinList(instrumentsFor(gs)),
       ARRANGEMENTS[s.arrangement] || '',
-      'instrumental', s.lengthText || '30 seconds', 'clean stereo mix'];
+      voiceFor(s, role), s.lengthText || '30 seconds', 'clean stereo mix'];
     return parts.filter(Boolean).join(', ') + '.';
   }
 
   // Role prompt derived from an edited main prompt: replace the "featuring ..." clause if present.
   function rolePromptFrom(prompt, role) {
     // The instrument list itself contains commas, so cut up to the next clause the template adds after it.
-    const re = /featuring .*?(?=, (?:with a gradual|building to|stripped-down|loop-friendly|instrumental)\b|\.\s*$)/i;
+    const re = /featuring .*?(?=, (?:with a gradual|building to|stripped-down|loop-friendly|instrumental|with vocals)\b|\.\s*$)/i;
+    // Instrument stems drop the vocals; the vocal stem asks for them.
+    const want = role.id === 'vocals' ? VOICE.on : VOICE.off, other = role.id === 'vocals' ? VOICE.off : VOICE.on;
+    prompt = prompt.replace(', ' + other + ',', ', ' + want + ',');
     if (re.test(prompt)) return prompt.replace(re, role.text);
     return prompt.replace(/\.\s*$/, '') + ', ' + role.text + '.';
   }
@@ -216,7 +227,7 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max || 48).replace(/-+$/, '') || 'mix';
   }
 
-  const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, energyWord, index, bpmGap, pairClash, mixClash,
+  const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, VOCAL_ROLE, VOICE, rolesFor, energyWord, index, bpmGap, pairClash, mixClash,
     clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, slug };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Mix = api;

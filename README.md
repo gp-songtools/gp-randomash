@@ -1,6 +1,6 @@
 # Randomash
 
-A genre blender for Google's **Lyria 3** music model. Pick genres from a large list, shape them with a few controls, watch the Lyria prompt update live, and generate instrumental 30-second clips or full songs. Stems are optional, and results can be trimmed into loops. The app runs entirely in the browser, with no server and no build step, so it can be hosted on GitHub Pages.
+A genre blender for Google's **Lyria 3** music model. Pick genres from a large list, shape them with a few controls, watch the Lyria prompt update live, and generate 30-second clips or full songs. Stems are optional, and results can be trimmed into loops. The app runs entirely in the browser, with no server and no build step, so it can be hosted on GitHub Pages.
 
 ## Setup
 
@@ -64,15 +64,16 @@ node tools/dry-run.js 5
 
 **Lyria prompt.** This is the composed prompt, built from:
 
-> {Mood} {primary} track blended with {secondaries} elements, {tempo} BPM, {energy} energy, {key feel}, featuring {instruments}, {arrangement}, instrumental, {length}, clean stereo mix.
+> {Mood} {primary} track blended with {secondaries} elements, {tempo} BPM, {energy} energy, {key feel}, featuring {instruments}, {arrangement}, {voice}, {length}, clean stereo mix.
 
-{length} is "30 seconds" for a clip, or "full-length song with a clear intro and ending" for a full song.
+{voice} is "instrumental", or "with vocals" when **Vocals** is ticked. {length} is "30 seconds" for a clip, or "full-length song with a clear intro and ending" for a full song.
 
 The text is editable. Once you edit it, a badge changes from *live* to *edited* and live updates pause until you click **Reset to composed prompt**. Prompts are US English and never name artists.
 
 **Generate.**
 - **Length**: **Clip** (30 seconds, about $0.04) or **Full song** (about 2–3 minutes, about $0.08). You pay per generation, not per second. Full songs have no exact-length setting.
-- **Stems** switches to four separate generations: drums only, bass only, chords and pads only, and melody only. They share tempo, key feel and seed. Being separate generations, they may not line up perfectly.
+- **Vocals** makes Lyria sing lyrics it writes itself (in English); the prompt says "with vocals" instead of "instrumental". Lyrics the model returns show as the *Model note*. Describe the voice generically, never as a real singer.
+- **Stems** switches to four separate generations: drums only, bass only, chords and pads only, and melody only, plus a fifth, vocals only (a cappella), when Vocals is ticked. The instrument parts stay instrumental. They share tempo, key feel and seed. Being separate generations, they may not line up perfectly.
 - **Use the gp-master stem splitter instead** (shown under Stems) generates one mix and then splits it in your browser into drums, bass and *other* (chords and melody). The split is done by [gp-master](https://github.com/gp-songtools/gp-master)'s own splitter, which downloads about 60 MB of models the first time.
 - The estimated cost is shown next to the button before every call.
 - While a run is in progress, a spinner and status line show which clip is being generated and any retries. **Generate** is disabled and **Cancel** appears.
@@ -153,7 +154,7 @@ gp-randomash/
 
 ## About the gp-master integration
 
-gp-master runs its MDX-Net models only in the browser, through Web Workers and onnxruntime-web; it is not a Node library. Its `sep-pool.js` starts workers with `new Worker('./sep-worker.js')`, a path relative to the page. `split.html` therefore sets `<base href="../gp-master/">` and loads gp-master's own `sep-pool.js`, so gp-master's workers, runtime and models are used exactly as published. This only works when both sites share an origin, as they do on `gp-songtools.github.io`, or with the side-by-side local server above. To point at another copy, add `?gpm=/path/to/gp-master/` to the URL; it must be the same origin. Vocals are not separated, since clips are instrumental.
+gp-master runs its MDX-Net models only in the browser, through Web Workers and onnxruntime-web; it is not a Node library. Its `sep-pool.js` starts workers with `new Worker('./sep-worker.js')`, a path relative to the page. `split.html` therefore sets `<base href="../gp-master/">` and loads gp-master's own `sep-pool.js`, so gp-master's workers, runtime and models are used exactly as published. This only works when both sites share an origin, as they do on `gp-songtools.github.io`, or with the side-by-side local server above. To point at another copy, add `?gpm=/path/to/gp-master/` to the URL; it must be the same origin. Vocals are separated too (with gp-master's vocal model) when **Vocals** is ticked.
 
 ## Limits
 

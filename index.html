@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Randomash</title>
-<meta name="description" content="Blend genres, shape a Lyria 3 prompt, and generate instrumental clips and stems with the Gemini API.">
+<meta name="description" content="Blend genres, shape a Lyria 3 prompt, and generate clips, songs and stems, instrumental or with vocals, with the Gemini API.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎛️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -124,7 +124,8 @@
       <span class="lbl" style="margin-top:6px">Length <button type="button" class="info" data-info="length"></button></span>
       <div class="seg" id="lengthSeg" role="radiogroup" aria-label="Length"></div>
       <p class="hint" id="lengthNote"></p>
-      <label class="chk"><input type="checkbox" id="stems"><span>Stems <button type="button" class="info" data-info="stems"></button><small>Four separate generations with role prompts (drums, bass, chords and pads, melody) sharing tempo, key feel and seed. They are separate clips, so they may not line up perfectly.</small></span></label>
+      <label class="chk"><input type="checkbox" id="vocals"><span>Vocals <button type="button" class="info" data-info="vocals"></button><small>Lyria sings, writing its own lyrics. Off, the track is instrumental.</small></span></label>
+      <label class="chk"><input type="checkbox" id="stems"><span>Stems <button type="button" class="info" data-info="stems"></button><small>Separate generations with role prompts (drums, bass, chords and pads, melody, plus vocals when Vocals is ticked) sharing tempo, key and seed. They are separate clips, so they may not line up perfectly.</small></span></label>
       <label class="chk sub" id="splitRow"><input type="checkbox" id="split" disabled><span>Use the gp-master stem splitter instead <button type="button" class="info" data-info="split"></button><small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time; a full song takes several minutes to split.</small></span></label>
     </div>
     <div class="go">

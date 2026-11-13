@@ -115,7 +115,7 @@
     $('families').innerHTML = IDX.families.map(f => `
       <details class="fam" open data-fam="${f.id}">
         <summary>${esc(f.name)} <span class="n">${f.genres.length}</span><span class="sel" hidden></span></summary>
-        <div class="chips">${f.genres.map(g => `<button type="button" class="chip" data-id="${g.id}" aria-pressed="false" title="${esc(g.name)} · typical ${g.bpm[0]}–${g.bpm[1]} BPM">${esc(g.name)}</button>`).join('')}</div>
+        <div class="chips">${f.genres.map(g => `<button type="button" class="chip" data-id="${g.id}" aria-pressed="false" aria-label="${esc(g.name)}" title="${esc(g.name)} · typical ${g.bpm[0]}–${g.bpm[1]} BPM">${esc(g.label || g.name)}</button>`).join('')}</div>
       </details>`).join('');
   }
 
@@ -154,7 +154,8 @@
     document.querySelectorAll('.chip').forEach(b => {
       const on = !!pos[b.dataset.id];
       b.setAttribute('aria-pressed', on);
-      const name = IDX.byId[b.dataset.id].name;
+      // Short label inside its family (e.g. "thrash" under Metal); the mix bar and prompt use the full name.
+      const g = IDX.byId[b.dataset.id], name = g.label || g.name;
       b.innerHTML = on ? `${esc(name)}<span class="ord" aria-label="position ${pos[b.dataset.id]}">${pos[b.dataset.id]}</span>` : esc(name);
     });
     document.querySelectorAll('details.fam').forEach(d => {
@@ -242,7 +243,7 @@
       let hits = 0;
       d.querySelectorAll('.chip').forEach(b => {
         const g = IDX.byId[b.dataset.id];
-        const hit = !q || famHit || g.name.toLowerCase().includes(q) || g.id.includes(q.replace(/\s+/g, '-'));
+        const hit = !q || famHit || g.name.toLowerCase().includes(q) || (g.label || '').toLowerCase().includes(q) || g.id.includes(q.replace(/\s+/g, '-'));
         b.classList.toggle('hidden', !hit); if (hit) hits++;
       });
       d.classList.toggle('hidden', !hits);

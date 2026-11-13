@@ -25,6 +25,8 @@
   - Requests stay sequential; retries only for transient errors, never for an empty prepay balance (402/429 "prepayment credits are depleted")
   - Match the gp-master palette and font; colors only via CSS vars on `:root` with the dark-mode overrides
   - Do not modify `gp-songtools/gp-master` without asking the owner; Randomash uses its files as published
+  - No limit on genres per family (owner's decision); don't pad or trim families to a size
+  - Genre `name` is the full term used in prompts, history and the mix bar; optional `label` is the shorter chip text inside its family (e.g. "thrash" under Metal); search matches both
   - Update `README.md` when a user-facing feature is added or renamed
   - Every field gets an ⓘ: `<button type="button" class="info" data-info="key">` plus an `INFO[key]` entry (title, explanation) in `app.js`; keep the text in step when a field's behavior changes
 - **Git**

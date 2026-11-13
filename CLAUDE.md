@@ -9,6 +9,7 @@
   - `split.html`: bridge that runs gp-master's stem splitter via `<base href="../gp-master/">`
   - `genres.json`: 138 genres in 14 families (bpm, energy, acoustic, clash, instruments, optional label and vocals; families have `near` and a default `vocals`)
   - `tools/dry-run.js`: prints Surprise me prompts with no API calls
+  - `CHANGELOG.md` (user-facing changes by date) and `changelog.html` (renders it in the browser; edit only the `.md`)
 - **Commands**
   - Serve (needs gp-master beside it for the splitter): from a folder holding both repos, `python3 -m http.server 8000`, then open `http://localhost:8000/gp-randomash/`
   - Syntax check: `for f in app.js mix.js lyria.js store.js tools/dry-run.js; do node --check $f; done`
@@ -29,6 +30,10 @@
   - No limit on genres per family (owner's decision); don't pad or trim families to a size
   - Genre `name` is the full term used in prompts, history and the mix bar; optional `label` is the shorter chip text inside its family (e.g. "thrash" under Metal); search matches both
   - Update `README.md` when a user-facing feature is added or renamed
+  - Add a `CHANGELOG.md` entry in the same commit as every user-facing change: today's date heading (reuse it if already at the top), Added / Changed / Fixed, plain user wording
+  - `index.html` and `changelog.html` end with the Cloudflare Web Analytics snippet (same token as all GP Song Tools); `split.html` is a hidden iframe and has none (it would double-count visits)
+  - Tab icon is 🎲 (inline SVG `<link rel="icon">`), matching the GP Song Tools menu card; the footer links to Changelog, the suite Privacy & credits page and the tools menu
+  - Privacy & credits live on the suite page `gp-songtools.github.io/toolsmenu/privacy.html` (repo `gp-songtools/toolsmenu`); update it and README "Privacy & credits" when changing what is sent, stored or credited
   - Genre chips show a prompt-contribution popup (`chipTip` in app.js) that must mirror `Mix.composePrompt` and `instrumentsFor`; update both together
   - Every field gets an ⓘ: `<button type="button" class="info" data-info="key">` plus an `INFO[key]` entry (title, explanation) in `app.js`; keep the text in step when a field's behavior changes
 - **Git**

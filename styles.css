@@ -159,3 +159,6 @@ details.fam summary .sel{font-size:.75rem;background:var(--chipOn);color:var(--c
 .hrun .ptxt{font-size:.82rem;color:var(--mut);margin:6px 0}
 .hrun .acts{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
 .filebtn{position:relative}
+.foot{max-width:1440px;margin:0 auto;padding:0 16px 28px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.85rem;color:var(--mut)}
+.foot a{color:inherit}
+.foot a:hover{color:var(--ac)}

@@ -128,11 +128,20 @@ gp-randomash/
 ├── lyria.js          Lyria/Gemini client: config, retries, refusal handling, response parsing
 ├── store.js          IndexedDB history and audio, output folder, history.json import/export
 ├── split.html        bridge that runs gp-master's splitter, unmodified, from the sibling site
+├── changelog.html    renders CHANGELOG.md in the browser
+├── CHANGELOG.md      user-facing changes by date
+├── CLAUDE.md         notes for Claude Code sessions
 ├── genres.json       127 genres in 13 families with BPM, clash, energy, acoustic, instruments
 ├── tools/dry-run.js  prints Surprise me prompts from the terminal, no API calls
 ├── .nojekyll         serve files as-is on GitHub Pages
 └── README.md
 ```
+
+## Privacy & credits
+
+No server or account of its own. Prompts and settings go only to Google's Gemini API (`generativelanguage.googleapis.com`) under your own key, and only when **Dry run** is off and you press Generate. Clips, history, your key (only if **Remember** is ticked) and your balance estimate stay in this browser; the optional output folder is on your own disk. The gp-master splitter runs on your device and downloads its models from `gp-songtools.github.io` the first time. Fonts load from Google Fonts. Pages load Cloudflare Web Analytics, shared by all GP Song Tools, for anonymous visit counts (no cookies; it never sees your prompts, clips or key).
+
+Credits: music by Google's **Lyria 3** model via the Gemini API (outputs carry Google's SynthID watermark); stem splitting by [GP Mastering](https://gp-songtools.github.io/gp-master/help.html#credits) (MDX-Net models by Kimberley Jensen and KUIELab, distributed by Ultimate Vocal Remover; ONNX Runtime Web); the Instrument Sans font (SIL Open Font License). Details: [Privacy & credits](https://gp-songtools.github.io/toolsmenu/privacy.html). What changed: [CHANGELOG.md](CHANGELOG.md), also shown at `changelog.html`.
 
 ## About the gp-master integration
 

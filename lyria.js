@@ -105,6 +105,10 @@
       if (!netErr && res.status === 400 && /safety|policy|prohibit|blocked/i.test(apiMessage(400, data)))
         throw new LyriaError(apiMessage(400, data), { refused: true, reason: 'POLICY' });
 
+      // An empty prepay balance comes back as 402 or 429; retrying cannot help.
+      if (!netErr && (res.status === 402 || res.status === 429) && /prepay|credits are depleted|billing/i.test(apiMessage(res.status, data)))
+        throw new LyriaError('Your Gemini API prepay balance has run out. Top it up in Google AI Studio under Billing, then try again. (' + apiMessage(res.status, data) + ')', { status: res.status, billing: true });
+
       const transient = netErr || TRANSIENT.has(res.status);
       if (!transient || attempt > LYRIA.MAX_RETRIES) {
         if (netErr) throw new LyriaError('Network error: ' + (netErr.message || netErr) + '. If this keeps happening, check your connection or an ad blocker.');

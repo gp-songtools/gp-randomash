@@ -1,0 +1,31 @@
+# Randomash: notes for Claude
+
+- **What it is**: static genre blender for Google's Lyria 3 (Gemini API), hosted on GitHub Pages at `gp-songtools.github.io/gp-randomash/`. No server, no build step, no package manager.
+- **Directory map**
+  - `index.html`, `styles.css`, `app.js`: page, styles, UI (picker, controls, prompt, generation, players, history, balance)
+  - `mix.js`: genre index, pair clash, Surprise me, prompt template; UMD, also runs in Node
+  - `lyria.js`: API client; the `LYRIA` object at the top is the one place for model ID, endpoint, price, retries
+  - `store.js`: IndexedDB `randomash` (stores `runs`, `audio`, `meta`), optional output folder, history.json import/export
+  - `split.html`: bridge that runs gp-master's stem splitter via `<base href="../gp-master/">`
+  - `genres.json`: 127 genres in 13 families (bpm, energy, acoustic, clash, instruments; families have `near`)
+  - `tools/dry-run.js`: prints Surprise me prompts with no API calls
+- **Commands**
+  - Serve (needs gp-master beside it for the splitter): from a folder holding both repos, `python3 -m http.server 8000`, then open `http://localhost:8000/gp-randomash/`
+  - Syntax check: `for f in app.js mix.js lyria.js store.js tools/dry-run.js; do node --check $f; done`
+  - Validate genres: `node -e "JSON.parse(require('fs').readFileSync('genres.json'))"`
+  - Prompt review: `node tools/dry-run.js 5`
+  - Browser tests: Playwright with `page.route('https://generativelanguage.googleapis.com/**')` mocks; never make real Lyria calls in tests
+- **Rules**
+  - Real Lyria calls cost money: never make one without the owner's go-ahead; Dry run stays on by default
+  - API key lives only in the browser (memory, or `randomash.key.v1` when Remember is ticked); send it only in the `x-goog-api-key` header, never in a URL, log, error text or commit
+  - Prompts: US English, never name real artists or imitate voices
+  - localStorage keys: `randomash.ui.v1`, `randomash.key.v1`, `randomash.balance.v1`; don't change a key's format without migrating it
+  - Balance is an estimate (amount entered minus `COST_PER_CLIP_USD` per returned clip); kept apart from history so deleting runs never refunds
+  - Requests stay sequential; retries only for transient errors, never for an empty prepay balance (402/429 "prepayment credits are depleted")
+  - Match the gp-master palette and font; colors only via CSS vars on `:root` with the dark-mode overrides
+  - Do not modify `gp-songtools/gp-master` without asking the owner; Randomash uses its files as published
+  - Update `README.md` when a user-facing feature is added or renamed
+- **Git**
+  - Pushing directly to `main` is allowed (owner's instruction); fetch first and push only as a fast-forward
+  - Never force-push `main`; if it has diverged, stop and ask
+  - Run the syntax checks before every push

@@ -2,6 +2,12 @@
 
 All notable changes to Randomash, newest first. The app has no version numbers, so entries are grouped by date.
 
+## 2026-11-18
+
+### Added
+
+- **Download song spec (loop)** under Generate: saves a GP Song Tools song spec for a Suno loop from the current mix and prompt, always instrumental, with the tempo and key filled in. Open it in Spec to Suno or give it to Claude. Free; nothing is sent anywhere.
+
 ## 2026-11-13 — Full songs, vocals, keys and modes; joins the GP Song Tools
 
 ### Added

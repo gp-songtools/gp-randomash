@@ -221,6 +221,7 @@
       : `Estimated cost: about $${usd.toFixed(2)} (${n} ${what}${n > 1 ? 's' : ''} × $${unitCost().toFixed(2)})`
         + (balLeft() != null ? ` · leaves about ${money(balLeft() - usd)}` : '');
     $('gen').disabled = busy || !$('prompt').value.trim();
+    $('specDl').disabled = !S.genres.length;
   }
 
   function setStatus(text, kind) {
@@ -312,6 +313,7 @@
     $('promptReset').onclick = () => { S.promptEdited = false; renderAll(); };
 
     $('gen').onclick = generate;
+    $('specDl').onclick = downloadSpec;
     $('cancel').onclick = () => { if (abortCtl) abortCtl.abort(); splitCancel(); };
 
     // settings panel
@@ -735,6 +737,15 @@
     return el;
   }
 
+  /* Song spec for a Suno loop (GP Song Tools format): request sound, instrumental, the prompt as its
+     Sound section. Built in this browser and downloaded; nothing is sent or stored. */
+  function downloadSpec() {
+    if (!S.genres.length) return;
+    const text = Mix.soundSpec(IDX, ps(), $('prompt').value.trim());
+    downloadBlob(new Blob([text], { type: 'text/markdown' }), runSlug() + '-loop.songspec.md');
+    setStatus('Song spec downloaded: an instrumental loop for Suno. Hand it to Spec to Suno or Claude.');
+  }
+
   function downloadBlob(blob, name) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
@@ -850,6 +861,7 @@
     vocals: ['Vocals', 'Off: the prompt says “instrumental”. On: the primary genre picks the vocal style, e.g. “with deep guttural growled vocals” for death metal or “with rhythmic rapped vocals” for boom bap; hover a genre to see its style. Lyria writes its own lyrics, in English. Any lyrics it returns appear as the Model note. Don’t ask for a real singer’s voice. With Stems, vocals become a fifth part.'],
     stems: ['Stems', 'Makes separate generations for drums, bass, chords and pads, and melody, plus vocals when Vocals is on, all with the same tempo, key and seed. Four or five times the cost, and as separate takes they may not line up perfectly.'],
     split: ['gp-master splitter', 'Generates one mix, then separates drums, bass and “other” in your browser with gp-master, plus vocals when Vocals is on. Costs one generation and the parts line up exactly. Downloads about 60 MB of models the first time (about 125 MB with vocals).'],
+    songspec: ['Song spec (loop)', 'Downloads <genres>-loop.songspec.md, a GP Song Tools song spec for a Suno loop (request: sound, loop: true, instrumental: true) with this tempo and, for a major or minor key, the key. Its Sound section is the prompt above with the vocals and the Lyria length wording taken out, up to 500 characters; Notes lists the genres and settings. Open it in Spec to Suno, or give it to Claude. Free: made in your browser, nothing is sent.'],
     generate: ['Generate and cost', 'Sends the prompt to Lyria. The estimate shows the cost before you click, and what your balance would be afterwards. Requests run one at a time; Cancel stops the rest.'],
     history: ['History', 'Every run you generate, newest first. Click one to restore its genres, settings, key and seed. ☆ stars a run, the 1–5 stars rate it, and the notes box is for your comments.'],
     starOnly: ['★ only', 'Show only runs you’ve starred.'],

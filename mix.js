@@ -232,13 +232,67 @@
     return prompt.replace(/\.\s*$/, '') + ', ' + role.text + '.';
   }
 
+  /* Song spec for a Suno loop (GP Song Tools format, gp-songtools/toolsmenu songspec/SPEC.md), laid out
+     like its blank-sound template. Always instrumental. The Sound section is the prompt (edited or not)
+     with the voice clause forced to "instrumental", the Lyria length wording removed and a chosen
+     major/minor key written as e.g. "C# minor" so Spec to Suno recognises it; at most 500 characters. */
+  const SOUND_MAX = 500;
+  const shortRoot = r => r.replace('-flat', 'b').replace('-sharp', '#');
+  function specKey(s) {
+    const r = rootById(s.root);
+    if (!r || (s.key !== 'major' && s.key !== 'minor')) return '';
+    return shortRoot(s.key === 'major' ? r.major : r.minor) + ' ' + s.key;
+  }
+  function soundText(s, prompt) {
+    let t = String(prompt || '').replace(/\s+/g, ' ').trim();
+    t = voiceIn(t) ? setVoice(t, VOICE.off) : t;
+    // Any other vocal wording someone typed goes too: a loop here never has vocals.
+    t = t.replace(/,\s*with [^,]*vocals?[^,]*(?=[,.]|$)/gi, '');
+    if (s.lengthText) t = t.split(', ' + s.lengthText).join('');
+    const k = specKey(s);
+    if (k) t = t.replace(keyClause(s.key, s.root, s.mode), 'in ' + k);
+    t = t.replace(/[.\s]+$/, '');
+    if (!/\binstrumental\b/i.test(t)) t += ', instrumental';
+    t += '.';
+    // Over the limit: drop whole clauses from the end, keeping "instrumental".
+    while (t.length > SOUND_MAX) {
+      const parts = t.replace(/\.$/, '').split(', ').filter(p => !/^instrumental$/i.test(p));
+      if (parts.length < 2) { t = t.slice(0, SOUND_MAX - 15).replace(/[\s,.]+\S*$/, '') + ', instrumental.'; break; }
+      parts.pop(); t = parts.join(', ') + ', instrumental.';
+    }
+    return t;
+  }
+  // Frontmatter values are quoted only when the format needs it (starts with a quote/bracket, or has ": " / " #").
+  const fmVal = v => { v = String(v); return /^["'[{]|: | #/.test(v) ? '"' + v.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"' : v; };
+  function soundSpec(idx, s, prompt, now) {
+    const gs = (s.genres || []).map(id => idx.byId[id]).filter(Boolean);
+    const title = (gs.map(g => g.name).join(' + ') + ' loop').slice(0, 256);
+    const sound = soundText(s, prompt || composePrompt(idx, s));
+    const key = specKey(s), d = now || new Date();
+    const kl = keyLabel(s.key, s.root, s.mode);
+    const set = [['schema_version', 1], ['request', 'sound'], ['title', title], ['bpm', Math.round(s.tempo)], ['key', key],
+      ['bpm_key_by', 'gp-randomash'], ['instrumental', 'true'], ['model', ''], ['voice_id', ''], ['vocal_gender', ''],
+      ['weirdness', ''], ['style_influence', ''], ['variety', ''], ['audio_influence', ''], ['duration', ''],
+      ['max_mode', ''], ['cover_source', ''], ['loop', 'true']];
+    const notes = [
+      'Made by Randomash on ' + d.toISOString().slice(0, 16) + 'Z.',
+      'Genres: ' + gs.map((g, i) => g.name + (i ? '' : ' (primary)')).join(', '),
+      'Mood: ' + (s.mood || 'cinematic') + ' · Energy: ' + energyWord(s.energy) + ' · Tempo: ' + Math.round(s.tempo) + ' BPM'
+        + ' · Key: ' + (kl || KEY_FEELS[s.key] || 'any') + (ARRANGEMENTS[s.arrangement] ? ' · Arrangement: ' + ARRANGEMENTS[s.arrangement] : ''),
+      'Instrumental loop: no vocals.'];
+    const sec = h => '## ' + h + '\n\n\n';
+    return '---\n' + set.map(([k, v]) => k + ': ' + (v === '' ? '' : fmVal(v))).join('\n') + '\n---\n\n# Song spec\n\n'
+      + ['Idea', 'Idea structure', 'Reference (never send to Suno)', 'Analysis', 'Style', 'Negative style', 'Structure', 'Stems', 'Lyrics'].map(sec).join('')
+      + '## Sound\n' + sound + '\n\n## Notes\n' + notes.join('\n') + '\n';
+  }
+
   function slug(s, max) {
     return String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max || 48).replace(/-+$/, '') || 'mix';
   }
 
   const api = { MOODS, KEY_FEELS, KEY_ROOTS, MODES, keyClause, keyLabel, ARRANGEMENTS, STEM_ROLES, VOCAL_ROLE, VOICE, rolesFor, vocalStyle, setVoice, voiceIn, energyWord, index, bpmGap, pairClash, mixClash,
-    clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, slug };
+    clashWeight, setK: k => { K = k; }, rng, surprise, defaultTempo, instrumentsFor, composePrompt, rolePromptFrom, soundText, soundSpec, slug };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Mix = api;
 })(typeof self !== 'undefined' ? self : this);

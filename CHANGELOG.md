@@ -2,6 +2,12 @@
 
 All notable changes to Randomash, newest first. The app has no version numbers, so entries are grouped by date.
 
+## 2026-11-20 — Browser icon
+
+### Fixed
+
+- The browser tab uses a Randomash initial in the app’s teal.
+
 ## 2026-11-18
 
 ### Added

@@ -32,7 +32,7 @@
   - Update `README.md` when a user-facing feature is added or renamed
   - Add a `CHANGELOG.md` entry in the same commit as every user-facing change: today's date heading (reuse it if already at the top), Added / Changed / Fixed, plain user wording
   - `index.html` and `changelog.html` end with the Cloudflare Web Analytics snippet (same token as all GP Song Tools); `split.html` is a hidden iframe and has none (it would double-count visits)
-  - Tab icon is 🎲 (inline SVG `<link rel="icon">`), matching the GP Song Tools menu card; the footer links to Changelog, the suite Privacy & credits page and the tools menu
+  - The tab icon uses a teal Randomash initial from the homepage branding; the footer links to Changelog, the suite Privacy & credits page and the tools menu
   - Privacy & credits live on the suite page `gp-songtools.github.io/toolsmenu/privacy.html` (repo `gp-songtools/toolsmenu`); update it and README "Privacy & credits" when changing what is sent, stored or credited
   - Genre chips show a prompt-contribution popup (`chipTip` in app.js) that must mirror `Mix.composePrompt` and `instrumentsFor`; update both together
   - Every field gets an ⓘ: `<button type="button" class="info" data-info="key">` plus an `INFO[key]` entry (title, explanation) in `app.js`; keep the text in step when a field's behavior changes

@@ -15,6 +15,8 @@ All notable changes to Randomash, newest first. The app has no version numbers, 
 
 ### Fixed
 
+- When Lyria withholds audio for possible similarity to an existing work, show a concise explanation and how to revise the prompt.
+
 - The browser tab uses dice in the app’s teal.
 
 ## 2026-11-18

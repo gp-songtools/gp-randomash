@@ -60,11 +60,13 @@
   }
 
   function refusalText(reason, msg, modelText) {
+    if (reason === 'RECITATION') {
+      return 'Lyria withheld the generated audio because it may resemble an existing work. Edit the Lyria prompt to describe an original groove, instrumentation, and arrangement. Leave out song titles, artist names, and recognizable hooks.';
+    }
     const base = {
       SAFETY: 'The safety filter blocked this prompt.',
       PROHIBITED_CONTENT: 'The prompt was refused as prohibited content.',
       BLOCKLIST: 'The prompt contains a blocked term.',
-      RECITATION: 'The result was blocked because it was too close to existing material. Try naming fewer specific styles or changing the instruments.',
       SPII: 'The prompt was refused because it looks like it contains personal information.',
       NO_CANDIDATE: 'The model returned no result for this prompt.'
     }[reason] || ('The request was refused (' + reason + ').');

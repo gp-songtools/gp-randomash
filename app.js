@@ -449,7 +449,10 @@
         } catch (e) {
           if (e.refused) {
             run.refusals.push({ role: c.role, reason: e.reason || '', message: e.message });
-            showRefusal(`${c.label}: refused`, e.message + (calls.length > 1 && i < calls.length - 1 ? '\nContinuing with the remaining parts.' : '\nThe page is still usable: edit the prompt and try again.'));
+            let message = e.message;
+            if (i < calls.length - 1) message += '\nContinuing with the remaining parts.';
+            else if (e.reason !== 'RECITATION') message += '\nEdit the prompt and try again.';
+            showRefusal(`${c.label}: refused`, message);
             if (calls.length === 1) break;
             continue;
           }

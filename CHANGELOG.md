@@ -6,7 +6,7 @@ All notable changes to Randomash, newest first. The app has no version numbers, 
 
 ### Fixed
 
-- The browser tab uses a Randomash initial in the app’s teal.
+- The browser tab uses dice in the app’s teal.
 
 ## 2026-11-18
 

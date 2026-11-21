@@ -4,34 +4,39 @@
 <title>Randomash</title>
 <meta name="description" content="Blend genres, shape a Lyria 3 prompt, and generate clips, songs and stems, instrumental or with vocals, with the Gemini API.">
 <link rel="icon" href="dice.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#142e2b">
+<link rel="preload" href="fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="top">
-  <div class="brand"><h1>Randomash</h1><span class="sub">Genre blender for Lyria 3</span></div>
-  <div class="topctl">
-    <label class="switch" title="Dry run shows the exact request without calling the API or spending anything">
-      <input type="checkbox" id="dry"><span class="track"></span><span>Dry run</span>
-    </label>
-    <button type="button" class="info" data-info="dry"></button>
-    <button class="ghost" id="setBtn" aria-expanded="false" aria-controls="setPanel">API key &amp; output</button>
-  </div>
+<a class="skip" href="#workspace">Skip to workspace</a>
+<header class="site-header">
+  <nav class="site-nav shell" aria-label="Site">
+    <a class="brand" href="./"><img src="dice.svg" alt="" width="34" height="34"> Randomash</a>
+    <a href="changelog.html">Changelog</a>
+    <div class="topctl">
+      <label class="switch" title="Dry run shows the request without sending it">
+        <input type="checkbox" id="dry" name="dry"><span class="track"></span><span>Dry run <small>No API call</small></span>
+      </label>
+      <button type="button" class="info" data-info="dry"></button>
+      <button class="ghost" id="setBtn" aria-expanded="false" aria-controls="setPanel">Settings</button>
+    </div>
+  </nav>
 </header>
 
 <section id="setPanel" class="card settings" hidden>
   <div class="setgrid">
     <div>
-      <label class="lbl" for="key">Gemini API key <button type="button" class="info" data-info="apikey"></button></label>
+      <div class="label-line"><label class="lbl" for="key">Gemini API key</label> <button type="button" class="info" data-info="apikey"></button></div>
       <div class="row">
-        <input type="password" id="key" autocomplete="off" spellcheck="false" placeholder="Paste your key">
+        <input type="password" id="key" name="key" autocomplete="off" spellcheck="false" placeholder="Paste your key">
         <button class="ghost" id="keyShow" type="button">Show</button>
         <button class="ghost" id="keyForget" type="button">Forget</button>
       </div>
-      <label class="chk"><input type="checkbox" id="keyRemember"><span>Remember the key on this device <button type="button" class="info" data-info="remember"></button><small>Saved in this browser’s storage for this site. Unticked, the key lasts until you close the page. It is sent only to Google, in a request header.</small></span></label>
-      <label class="lbl" for="balIn" style="margin-top:14px">Prepay balance (from AI Studio → Billing) <button type="button" class="info" data-info="balance"></button></label>
+      <div class="check-line"><label class="chk"><input type="checkbox" id="keyRemember" name="keyRemember"><span>Remember the key on this device<small>Saved in this browser’s storage for this site. Unticked, the key lasts until you close the page. It is sent only to Google, in a request header.</small></span></label> <button type="button" class="info" data-info="remember"></button></div>
+      <div class="label-line"><label class="lbl" for="balIn" style="margin-top:14px">Prepay balance (from AI Studio → Billing)</label> <button type="button" class="info" data-info="balance"></button></div>
       <div class="row">
-        <span class="dollar">$</span><input type="number" id="balIn" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 4.12" style="max-width:140px">
+        <span class="dollar">$</span><input type="number" id="balIn" name="balIn" autocomplete="off" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 4.12" style="max-width:140px">
         <button class="ghost" id="balSet" type="button">Set</button>
         <button class="ghost" id="balClear" type="button" hidden>Clear</button>
       </div>
@@ -49,84 +54,109 @@
       <p class="hint" id="modelInfo"></p>
     </div>
   </div>
+  <p id="settingsStatus" class="status" role="status"></p>
 </section>
 
-<div class="layout">
-<main>
+<main class="shell workspace" id="workspace" tabindex="-1">
+  <div class="intro">
+    <div>
+      <h1>Find your next sound.</h1>
+      <p>Blend genres and shape the tempo, mood, and arrangement. Generate a clip with Lyria or download a song spec for Suno.</p>
+    </div>
+    <section class="example" aria-labelledby="example-title">
+      <div class="example-copy">
+        <p>Example blend</p>
+        <h2 id="example-title">Deep house <span aria-hidden="true">×</span><span class="sr-only"> and </span> neo‑soul</h2>
+        <p>121 BPM, muted kick, jazzy Rhodes</p>
+        <button id="loadExample" type="button">Try this blend</button>
+      </div>
+      <div class="record" aria-hidden="true"></div>
+    </section>
+  </div>
+
+<div class="desk">
+<div class="lane">
   <section class="mixbar card" aria-label="Current mix">
     <div class="mixhead">
-      <h2>Current mix <button type="button" class="info" data-info="mix"></button></h2>
+      <h2 id="mix-title" tabindex="-1">Current mix <button type="button" class="info" data-info="mix"></button></h2>
       <span class="clash" id="clash" hidden></span>
-      <span class="spacer"></span>
-      <span class="balwrap"><button class="bal" id="balBadge" type="button" title="Estimated prepay balance. Click to update it."></button><button type="button" class="info" data-info="balanceBadge"></button></span>
-      <button id="surprise" type="button">🎲 Surprise me</button><button type="button" class="info" data-info="surprise"></button>
-      <button class="ghost" id="clear" type="button">Clear</button>
+      <div class="mix-actions">
+        <span class="mix-action"><button class="ghost" id="surprise" type="button">Surprise me</button><button type="button" class="info" data-info="surprise"></button></span>
+        <button class="ghost" id="clear" type="button">Clear</button>
+        <span class="balwrap"><button class="bal" id="balBadge" type="button" title="Estimated prepay balance. Click to update it."></button><button type="button" class="info" data-info="balanceBadge"></button></span>
+      </div>
     </div>
     <div id="mixChips" class="mixchips" aria-live="polite"></div>
+    <a class="jump" href="#prompt-section">Go to prompt</a>
     <p class="warn" id="tooMany" hidden>More than 4 genres usually makes a muddy prompt. Lyria tends to average them out.</p>
   </section>
 
   <section class="card picker" aria-label="Genres">
+    <h2 class="section-title">Genre library</h2>
     <div class="pickhead">
-      <input type="search" id="search" placeholder="Search genres (Enter adds the first match)" autocomplete="off">
+      <input type="search" id="search" name="search" aria-label="Search genres" placeholder="Search genres…" autocomplete="off">
       <button class="ghost" id="foldAll" type="button">Collapse all</button><button type="button" class="info" data-info="genres"></button>
     </div>
     <div id="families"></div>
     <p class="hint" id="noMatch" hidden>No genre matches that search.</p>
   </section>
 
-  <section class="card controls" aria-label="Shape">
+  <section class="card controls" aria-labelledby="shape-title">
+    <h2 id="shape-title" class="section-title">Shape the sound</h2>
     <div class="ctl">
-      <label class="lbl" for="tempo">Tempo <output id="tempoV"></output> BPM <button type="button" class="info" data-info="tempo"></button></label>
-      <input type="range" id="tempo" min="40" max="220" step="1">
+      <div class="label-line"><label class="lbl" for="tempo">Tempo</label> <span><output id="tempoV"></output> BPM</span> <button type="button" class="info" data-info="tempo"></button></div>
+      <input type="range" id="tempo" name="tempo" min="40" max="220" step="1">
       <div class="hint row"><span id="tempoHint">Pick a genre to set a typical tempo.</span><button class="link" id="tempoReset" type="button" hidden>Reset to genre</button></div>
     </div>
     <div class="ctl">
-      <label class="lbl" for="energy">Energy <output id="energyV"></output> <button type="button" class="info" data-info="energy"></button></label>
-      <input type="range" id="energy" min="0" max="100" step="1">
+      <div class="label-line"><label class="lbl" for="energy">Energy</label> <output id="energyV"></output> <button type="button" class="info" data-info="energy"></button></div>
+      <input type="range" id="energy" name="energy" min="0" max="100" step="1">
       <div class="hint row"><span>low</span><span class="spacer"></span><span>high</span></div>
     </div>
     <div class="ctl">
-      <label class="lbl" for="mood">Mood <button type="button" class="info" data-info="mood"></button></label>
-      <select id="mood"></select>
+      <div class="label-line"><label class="lbl" for="mood">Mood</label> <button type="button" class="info" data-info="mood"></button></div>
+      <select id="mood" name="mood"></select>
     </div>
     <div class="ctl">
       <span class="lbl">Key <button type="button" class="info" data-info="key"></button></span>
       <div class="seg" id="keyFeel" role="radiogroup" aria-label="Key feel"></div>
-      <div class="row" style="margin-top:8px"><select id="root" aria-label="Key" style="flex:1;min-width:0"></select><button type="button" class="info" data-info="root"></button></div>
-      <div class="row" id="modeRow" style="margin-top:8px" hidden><select id="mode" aria-label="Mode" style="flex:1;min-width:0"></select><button type="button" class="info" data-info="mode"></button></div>
+      <div class="row" style="margin-top:8px"><select id="root" name="root" aria-label="Key" style="flex:1;min-width:0"></select><button type="button" class="info" data-info="root"></button></div>
+      <div class="row" id="modeRow" style="margin-top:8px" hidden><select id="mode" name="mode" aria-label="Mode" style="flex:1;min-width:0"></select><button type="button" class="info" data-info="mode"></button></div>
     </div>
     <div class="ctl">
-      <label class="lbl" for="arr">Arrangement <button type="button" class="info" data-info="arrangement"></button></label>
-      <select id="arr"></select>
+      <div class="label-line"><label class="lbl" for="arr">Arrangement</label> <button type="button" class="info" data-info="arrangement"></button></div>
+      <select id="arr" name="arr"></select>
     </div>
     <div class="ctl">
-      <label class="lbl" for="seed">Seed <button type="button" class="info" data-info="seed"></button></label>
+      <div class="label-line"><label class="lbl" for="seed">Seed</label> <button type="button" class="info" data-info="seed"></button></div>
       <div class="row">
-        <input type="number" id="seed" min="0" max="2147483647" step="1">
-        <button class="ghost" id="seedRoll" type="button" title="New seed now">🎲</button>
+        <input type="number" id="seed" name="seed" autocomplete="off" min="0" max="2147483647" step="1">
+        <button class="ghost" id="seedRoll" type="button" aria-label="Roll a new seed">Roll</button>
       </div>
-      <label class="chk"><input type="checkbox" id="seedRandom"><span>New random seed for each generation <button type="button" class="info" data-info="seedRandom"></button><small>On: a different track every time from the same recipe. Off (locked): the same prompt and seed should give the same track again, so you can change one setting and hear only that change.</small></span></label>
+      <div class="check-line"><label class="chk"><input type="checkbox" id="seedRandom" name="seedRandom"><span>New random seed for each generation<small>On: a different track every time from the same recipe. Off (locked): the same prompt and seed should give the same track again, so you can change one setting and hear only that change.</small></span></label> <button type="button" class="info" data-info="seedRandom"></button></div>
     </div>
   </section>
 
-  <section class="card prompt" aria-label="Prompt">
+</div>
+<div class="lane">
+  <section class="card prompt" id="prompt-section" tabindex="-1" aria-labelledby="prompt-title">
+    <h2 class="section-title" id="prompt-title">Prompt &amp; output</h2>
     <div class="row">
-      <label class="lbl" for="prompt">Lyria prompt <button type="button" class="info" data-info="prompt"></button></label>
+      <div class="label-line"><label class="lbl" for="prompt">Lyria prompt</label> <button type="button" class="info" data-info="prompt"></button></div>
       <span class="badge" id="promptState">live</span>
       <span class="spacer"></span>
       <button class="link" id="promptReset" type="button" hidden>Reset to composed prompt</button>
     </div>
-    <textarea id="prompt" rows="4" spellcheck="true" lang="en-US" placeholder="Pick at least one genre to compose a prompt."></textarea>
+    <textarea id="prompt" name="prompt" rows="4" spellcheck="true" lang="en-US" placeholder="Select a genre to compose your prompt."></textarea>
     <p class="hint">US English only. Describe styles and instruments; don’t name real artists or ask to imitate a voice. Editing the text stops live updates until you reset.</p>
 
     <div class="genrow">
       <span class="lbl" style="margin-top:6px">Length <button type="button" class="info" data-info="length"></button></span>
       <div class="seg" id="lengthSeg" role="radiogroup" aria-label="Length"></div>
       <p class="hint" id="lengthNote"></p>
-      <label class="chk"><input type="checkbox" id="vocals"><span>Vocals <button type="button" class="info" data-info="vocals"></button><small>Lyria sings, writing its own lyrics. Off, the track is instrumental.</small></span></label>
-      <label class="chk"><input type="checkbox" id="stems"><span>Stems <button type="button" class="info" data-info="stems"></button><small>Separate generations with role prompts (drums, bass, chords and pads, melody, plus vocals when Vocals is ticked) sharing tempo, key and seed. They are separate clips, so they may not line up perfectly.</small></span></label>
-      <label class="chk sub" id="splitRow"><input type="checkbox" id="split" disabled><span>Use the gp-master stem splitter instead <button type="button" class="info" data-info="split"></button><small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time; a full song takes several minutes to split.</small></span></label>
+      <div class="check-line"><label class="chk"><input type="checkbox" id="vocals" name="vocals"><span>Vocals<small>Lyria sings, writing its own lyrics. Off, the track is instrumental.</small></span></label> <button type="button" class="info" data-info="vocals"></button></div>
+      <div class="check-line"><label class="chk"><input type="checkbox" id="stems" name="stems"><span>Stems<small>Separate generations with role prompts (drums, bass, chords and pads, melody, plus vocals when Vocals is ticked) sharing tempo, key and seed. They are separate clips, so they may not line up perfectly.</small></span></label> <button type="button" class="info" data-info="stems"></button></div>
+      <div class="check-line"><label class="chk sub" id="splitRow"><input type="checkbox" id="split" name="split" disabled><span>Use the gp-master stem splitter instead<small>One generation, then drums, bass and “other” are separated in this browser by gp-master. Downloads about 60 MB of models the first time; a full song takes several minutes to split.</small></span></label> <button type="button" class="info" data-info="split"></button></div>
     </div>
     <div class="go">
       <button id="gen" class="btn-go" type="button">Generate</button>
@@ -145,23 +175,25 @@
     <div class="row"><h2 id="resultTitle">Result</h2><span class="spacer"></span><span class="hint" id="resultMeta"></span></div>
     <div id="result"></div>
   </section>
-</main>
 
 <aside class="history card" aria-label="History">
   <div class="row histhead">
     <h2>History <button type="button" class="info" data-info="history"></button></h2><span class="spacer"></span>
-    <label class="chk tiny"><input type="checkbox" id="starOnly"><span>★ only</span></label><button type="button" class="info" data-info="starOnly"></button>
+    <label class="chk tiny"><input type="checkbox" id="starOnly" name="starOnly"><span>★ only</span></label><button type="button" class="info" data-info="starOnly"></button>
   </div>
   <div class="row">
     <button class="ghost small" id="histExport" type="button">Export history.json</button>
-    <label class="ghost small filebtn">Import<input type="file" id="histImport" accept="application/json,.json" hidden></label><button type="button" class="info" data-info="exportImport"></button>
+    <label class="ghost small filebtn">Import history<input type="file" id="histImport" name="histImport" aria-label="Import history" accept="application/json,.json"></label><button type="button" class="info" data-info="exportImport"></button>
   </div>
   <ol id="history" class="hist"></ol>
+  <p id="historyStatus" class="status" role="status"></p>
   <p class="hint" id="histEmpty">Runs you generate appear here. Click a run to restore its genres and settings.</p>
 </aside>
 </div>
+</div>
+</main>
 
-<footer class="foot">
+<footer class="foot shell">
   <a href="changelog.html">Changelog</a>
   <a href="https://gp-songtools.github.io/toolsmenu/privacy.html">Privacy &amp; credits</a>
   <a href="https://gp-songtools.github.io/toolsmenu/">More GP Song Tools</a>

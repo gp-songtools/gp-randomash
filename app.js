@@ -9,6 +9,7 @@
   const qs = new URLSearchParams(location.search);
 
   // ---------- state ----------
+  const EXAMPLE_GENRES = ['deep-house', 'neo-soul'];
   let IDX = null;
   const S = {
     genres: [], tempo: 120, energy: 50, mood: 'cinematic', key: 'minor', root: '', mode: '', arrangement: 'none',
@@ -33,6 +34,9 @@
     try { cat = await (await fetch('genres.json', { cache: 'no-cache' })).json(); }
     catch (e) { setStatus('Could not load genres.json. Serve this folder over http(s); opening the file directly does not work.', 'err'); return; }
     IDX = Mix.index(cat);
+    $('prompt').placeholder = Mix.composePrompt(IDX, {
+      ...ps(), genres: EXAMPLE_GENRES, tempo: Mix.defaultTempo(IDX.byId[EXAMPLE_GENRES[0]])
+    });
     buildControls(); buildPicker(); loadUI(); loadKey(); wire();
     if (qs.get('dry') === '1') S.dry = true;
     applyStateToControls(); renderAll();
@@ -114,8 +118,8 @@
   }
 
   function buildPicker() {
-    $('families').innerHTML = IDX.families.map(f => `
-      <details class="fam" open data-fam="${f.id}">
+    $('families').innerHTML = IDX.families.map((f, index) => `
+      <details class="fam"${index < 2 ? ' open' : ''} data-fam="${f.id}">
         <summary>${esc(f.name)} <span class="n">${f.genres.length}</span><span class="sel" hidden></span></summary>
         <div class="chips">${f.genres.map(g => `<button type="button" class="chip" data-id="${g.id}" aria-pressed="false" aria-label="${esc(g.name)}">${esc(g.label || g.name)}</button>`).join('')}</div>
       </details>`).join('');
@@ -192,7 +196,6 @@
     $('tempoReset').hidden = !p || S.tempo === Mix.defaultTempo(p);
     $('seed').disabled = false;
     $('split').disabled = !S.stems;
-    $('splitRow').style.opacity = S.stems ? 1 : .55;
     document.body.classList.toggle('dry', S.dry);
     $('modeRow').hidden = S.key !== 'modal';
     $('lengthNote').textContent = S.length === 'full'
@@ -205,7 +208,7 @@
   function renderPrompt() {
     if (!S.promptEdited) { S.prompt = composed(); $('prompt').value = S.prompt; }
     const st = $('promptState');
-    st.textContent = S.promptEdited ? 'edited' : 'live';
+    st.textContent = S.promptEdited ? 'Edited' : S.genres.length ? 'Live' : 'Example preview';
     st.classList.toggle('edited', S.promptEdited);
     $('promptReset').hidden = !S.promptEdited;
   }
@@ -224,8 +227,8 @@
     $('specDl').disabled = !S.genres.length;
   }
 
-  function setStatus(text, kind) {
-    const el = $('status');
+  function setStatus(text, kind, target = 'status') {
+    const el = $(target);
     el.innerHTML = (kind === 'busy' ? '<span class="spin" aria-hidden="true"></span>' : '') + `<span>${esc(text || '')}</span>`;
     el.style.color = kind === 'err' ? 'var(--warn)' : '';
   }
@@ -265,6 +268,12 @@
       if (r) toggleGenre(r.dataset.remove); else if (p) makePrimary(p.dataset.primary);
     });
     $('surprise').onclick = () => setGenres(Mix.surprise(IDX));
+    $('loadExample').onclick = () => {
+      if ((S.genres.length || S.promptEdited) && !confirm('Replace the current mix and prompt with the example blend?')) return;
+      S.promptEdited = false;
+      setGenres(EXAMPLE_GENRES);
+      $('mix-title').focus();
+    };
     $('clear').onclick = () => { S.genres = []; renderAll(); };
     $('search').addEventListener('input', e => filter(e.target.value));
     $('search').addEventListener('keydown', e => {
@@ -321,25 +330,25 @@
     $('key').addEventListener('input', e => { apiKey = e.target.value.trim(); if ($('keyRemember').checked) lsSet(KEYKEY, apiKey || null); });
     $('keyRemember').onchange = e => lsSet(KEYKEY, e.target.checked && apiKey ? apiKey : null);
     $('keyShow').onclick = () => { const k = $('key'); k.type = k.type === 'password' ? 'text' : 'password'; $('keyShow').textContent = k.type === 'password' ? 'Show' : 'Hide'; };
-    $('keyForget').onclick = () => { apiKey = ''; $('key').value = ''; $('keyRemember').checked = false; lsSet(KEYKEY, null); setStatus('Key removed from this page and from this browser’s storage.'); };
+    $('keyForget').onclick = () => { apiKey = ''; $('key').value = ''; $('keyRemember').checked = false; lsSet(KEYKEY, null); setStatus('Key removed from this page and from this browser’s storage.', null, 'settingsStatus'); };
     const balSet = () => {
       const v = Math.round(parseFloat($('balIn').value) * 100) / 100;
-      if (!Number.isFinite(v) || v < 0) { setStatus('Enter the balance as a number, for example 4.12.', 'err'); $('balIn').focus(); return; }
+      if (!Number.isFinite(v) || v < 0) { setStatus('Enter the balance as a number, for example 4.12.', 'err', 'settingsStatus'); $('balIn').focus(); return; }
       lsSet(BALKEY, JSON.stringify({ amount: v, spent: 0, setAt: new Date().toISOString() }));
-      $('balIn').value = ''; renderBalance(); setStatus(`Balance set to ${money(v)}.`);
+      $('balIn').value = ''; renderBalance(); setStatus(`Balance set to ${money(v)}.`, null, 'settingsStatus');
     };
     $('balSet').onclick = balSet;
     $('balIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); balSet(); } });
     $('balClear').onclick = () => { lsSet(BALKEY, null); renderBalance(); };
-    // The badge lives in the sticky mix bar, so the settings panel may be scrolled out of view.
+    // The settings panel may be above the viewport when the balance button is used.
     $('balBadge').onclick = () => {
       $('setPanel').hidden = false; $('setBtn').setAttribute('aria-expanded', true);
-      $('setPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('setPanel').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
       $('balIn').focus({ preventScroll: true });
     };
     $('folderPick').onclick = async () => {
-      try { await Store.chooseFolder(); await renderFolder(); setStatus('Output folder set. history.json written there.'); }
-      catch (e) { if (e.name !== 'AbortError') setStatus('Could not use that folder: ' + e.message, 'err'); }
+      try { await Store.chooseFolder(); await renderFolder(); setStatus('Output folder set. history.json written there.', null, 'settingsStatus'); }
+      catch (e) { if (e.name !== 'AbortError') setStatus('Could not use that folder: ' + e.message, 'err', 'settingsStatus'); }
     };
     $('folderForget').onclick = async () => { await Store.forgetFolder(); await renderFolder(); };
 
@@ -349,8 +358,8 @@
     $('histImport').onchange = async e => {
       const f = e.target.files[0]; e.target.value = '';
       if (!f) return;
-      try { const n = await Store.importJSON(await f.text()); setStatus(`Imported ${n} run${n === 1 ? '' : 's'}. Audio is not part of history.json, so imported runs from another browser have settings but no clips.`); renderHistory(); }
-      catch (err) { setStatus('Import failed: ' + err.message, 'err'); }
+      try { const n = await Store.importJSON(await f.text()); setStatus(`Imported ${n} run${n === 1 ? '' : 's'}. Audio is not part of history.json, so imported runs from another browser have settings but no clips.`, null, 'historyStatus'); renderHistory(); }
+      catch (err) { setStatus('Import failed: ' + err.message, 'err', 'historyStatus'); }
     };
     $('history').addEventListener('click', onHistoryClick);
     $('history').addEventListener('change', onHistoryChange);
@@ -405,11 +414,11 @@
     const unit = unitCost(), cost = calls.length * unit, length = S.length;
 
     if (S.dry) return dryRun(calls, mode, cost);
-    if (!apiKey) { setStatus('Add your Gemini API key under “API key & output” first. Or turn on Dry run to preview requests.', 'err'); $('setPanel').hidden = false; $('key').focus(); return; }
+    if (!apiKey) { setStatus('Add your Gemini API key or turn on Dry run to preview requests.', 'err', 'settingsStatus'); $('setPanel').hidden = false; $('setBtn').setAttribute('aria-expanded', true); $('key').focus(); return; }
     const left = balLeft();
     if (left != null && left - cost < 0 &&
         !confirm(`This run costs about ${money(cost)}, but your estimated prepay balance is ${money(left)}.\n\nIf the balance has really run out, Google will refuse the request. Generate anyway?`)) {
-      setStatus('Not generated. Update the balance under “API key & output” if AI Studio shows more.'); return;
+      setStatus('Not generated. Update the balance under Settings if AI Studio shows more.'); return;
     }
     if (Store.folderName()) { try { await Store.folderReady(true); } catch (_) {} }
 
@@ -588,9 +597,10 @@
     el.innerHTML = `
       <div class="ttl">${esc(f.label)} <small>${esc(f.role)} · ${(f.bytes / 1024 / 1024).toFixed(2)} MB${f.savedToFolder ? ' · saved to folder' : ''}</small></div>
       <button type="button" class="pp" aria-label="Play ${esc(f.label)}">▶</button>
-      <canvas aria-label="Waveform. Click to seek, drag to select a region to trim."></canvas>
+      <canvas tabindex="0" role="slider" aria-label="Playback position"
+        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 seconds"></canvas>
       <span class="tm">0:00 / –:––</span>
-      <div class="dl"><a href="${url}" download="${esc(f.file)}">Download ${esc(f.file)}</a>
+      <div class="dl"><a href="${url}" download="${esc(f.file)}" title="${esc(f.file)}">Download ${esc((f.file.split('.').pop() || 'audio').toUpperCase())}</a>
         <button type="button" class="link" data-trim aria-expanded="false">✂ Trim</button><button type="button" class="info" data-info="trim"></button>
         ${f.prompt ? '<span class="hint" style="margin:0" title="' + esc(f.prompt) + '">prompt ▸ hover</span>' : ''}</div>
       <div class="trim" hidden>
@@ -662,10 +672,29 @@
       }
     }
     const tick = () => { draw(); tm.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration); if (!audio.paused) requestAnimationFrame(tick); };
-    audio.addEventListener('loadedmetadata', tick);
+    const updatePosition = () => {
+      const percent = audio.duration ? Math.round(audio.currentTime / audio.duration * 100) : 0;
+      cv.setAttribute('aria-valuenow', percent);
+      cv.setAttribute('aria-valuetext', fmt(audio.currentTime));
+    };
+    audio.addEventListener('loadedmetadata', () => { tick(); updatePosition(); });
+    audio.addEventListener('timeupdate', updatePosition);
+    cv.addEventListener('keydown', e => {
+      if (!Number.isFinite(audio.duration)) return;
+      const step = audio.duration / 20;
+      const target = {
+        ArrowLeft: audio.currentTime - step, ArrowDown: audio.currentTime - step,
+        ArrowRight: audio.currentTime + step, ArrowUp: audio.currentTime + step,
+        Home: 0, End: audio.duration
+      }[e.key];
+      if (target === undefined) return;
+      e.preventDefault();
+      audio.currentTime = Math.max(0, Math.min(audio.duration, target));
+      tick(); updatePosition();
+    });
     audio.addEventListener('ended', () => { btn.textContent = '▶'; tick(); });
-    audio.addEventListener('pause', () => { btn.textContent = '▶'; });
-    audio.addEventListener('play', () => { btn.textContent = '❚❚'; tick(); });
+    audio.addEventListener('pause', () => { btn.textContent = '▶'; btn.setAttribute('aria-label', 'Play ' + f.label); });
+    audio.addEventListener('play', () => { btn.textContent = '❚❚'; btn.setAttribute('aria-label', 'Pause ' + f.label); tick(); });
     btn.onclick = () => {
       if (audio.paused) { stopLoop(); if (playing && playing !== audio) playing.pause(); playing = audio; audio.play(); }
       else audio.pause();
@@ -831,7 +860,7 @@
     tempoTouched = true; currentRunId = r.id;
     applyStateToControls(); renderAll(); renderHistory();
     setStatus(`Restored ${r.genreNames ? r.genreNames.join(' + ') : 'run'} with seed ${r.seed} locked. Tweak and generate again.`);
-    document.querySelector('.mixbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelector('.mixbar').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 
   // ---------- info tooltips ----------

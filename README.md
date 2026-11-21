@@ -8,7 +8,7 @@ A genre blender for Google's **Lyria 3** music model. Pick genres from a large l
 
 1. In the repository on GitHub, open **Settings → Pages**, set **Source** to *Deploy from a branch*, and choose `main` and `/ (root)`.
 2. Open `https://gp-songtools.github.io/gp-randomash/`.
-3. Click **API key & output**, paste a Gemini API key, and tick **Remember** if you want it kept in this browser.
+3. Click **Settings**, paste a Gemini API key, and tick **Remember** if you want it kept in this browser.
 
 ### Locally
 
@@ -39,11 +39,13 @@ node tools/dry-run.js 5
 
 ## The page, described
 
-**Header.** It has the app name, the **Dry run** switch, and **API key & output**. That button opens the settings panel: the key field with Show, Forget and Remember, the output-folder chooser, and the model ID with its estimated price per clip.
+**Example blend.** Select **Try this blend** to load deep house and neo-soul into the current mix and see the composed Lyria prompt. Loading the blend does not generate audio.
+
+**Header.** It has the app name, the **Dry run** switch, and **Settings**. That button opens the settings panel: the key field with Show, Forget and Remember, the output-folder chooser, and the model ID with its estimated price per clip.
 
 **Field help.** Every field has a small ⓘ next to its label. Hover over it, or tab to it with the keyboard, for a short explanation of what the field does and how it affects the prompt or the cost. On a phone, tap ⓘ to open the explanation and tap again, or anywhere else, to close it.
 
-**Prepay balance.** Google offers no API to read your Gemini prepay balance, so in **API key & output** you type in the figure AI Studio shows (Billing). The app then subtracts its estimated cost for each clip Lyria returns; refused prompts and errors aren't counted. A badge in the Current mix bar, which stays pinned at the top as you scroll, shows roughly what's left (or **Set balance** until you enter one). It turns amber below about 10 clips and red at zero, and you can click it to update the figure. If a run would take the estimate below zero, Generate asks before going ahead. The figure is stored only in your browser, so visitors never see it, and it's an estimate, so re-enter the real number now and then. If the balance really is empty, Google refuses the call and the app says so instead of retrying.
+**Prepay balance.** Google offers no API to read your Gemini prepay balance, so in **Settings** you type in the figure AI Studio shows (Billing). The app then subtracts its estimated cost for each clip Lyria returns; refused prompts and errors aren't counted. A badge in the Current mix bar, which stays pinned at the top as you scroll, shows roughly what's left (or **Set balance** until you enter one). It turns amber below about 10 clips and red at zero, and you can click it to update the figure. If a run would take the estimate below zero, Generate asks before going ahead. The figure is stored only in your browser, so visitors never see it, and it's an estimate, so re-enter the real number now and then. If the balance really is empty, Google refuses the call and the app says so instead of retrying.
 
 **Current mix** (sticks to the top while you scroll). Your selected genres appear as chips in the order you clicked them. The first is labeled *primary* and the rest *secondary*. Each chip has **×** to remove it, and secondaries have **↑** to make them primary. A badge shows the mix's average **clash** score: *smooth* below 0.4, *interesting* from 0.4 to 0.7, *chaotic* above 0.7. With more than four genres, a warning says the prompt is likely to turn muddy. **🎲 Surprise me** picks 2–3 genres, weighted toward a clash between 0.4 and 0.7. **Clear** empties the mix.
 

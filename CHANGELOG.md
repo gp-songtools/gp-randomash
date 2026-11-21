@@ -2,7 +2,16 @@
 
 All notable changes to Randomash, newest first. The app has no version numbers, so entries are grouped by date.
 
-## 2026-11-20 — Browser icon
+## 2026-11-20 — Mixing workspace
+
+### Added
+
+- Load a deep house and neo-soul example to see how the genres combine in a Lyria prompt.
+
+### Changed
+
+- The genre library, sound controls, prompt and history use a responsive mixing workspace with larger labels and numbers. The changelog shares the same design.
+- Dry run says when no request will be sent. Settings and history show feedback beside their controls, and the waveform supports keyboard seeking.
 
 ### Fixed
 
